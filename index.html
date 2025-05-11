@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soccer Substitution Manager</title>
+  <style>
+    /* Simple clean styling */
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    h1, h2, h3 {
+      color: #1e3a8a;
+    }
+    
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
+    }
+    
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    
+    .primary-btn {
+      background-color: #3b82f6;
+      color: white;
+    }
+    
+    .success-btn {
+      background-color: #10b981;
+      color: white;
+    }
+    
+    .warning-btn {
+      background-color: #f59e0b;
+      color: white;
+    }
+    
+    .danger-btn {
+      background-color: #ef4444;
+      color: white;
+    }
+    
+    .dark-btn {
+      background-color: #4b5563;
+      color: white;
+    }
+    
+    .disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    
+    .player-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 10px 0;
+    }
+    
+    .player-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .lineup-container, .bench-container {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    
+    .lineup-container {
+      background-color: #d1fae5;
+      border: 1px solid #6ee7b7;
+    }
+    
+    .bench-container {
+      background-color: #dbeafe;
+      border: 1px solid #93c5fd;
+    }
+    
+    .leaving {
+      background-color: #fef3c7;
+      border: 1px solid #fcd34d;
+    }
+    
+    .entering {
+      background-color: #d1fae5;
+      border: 1px solid #6ee7b7;
+    }
+    
+    .blinking {
+      animation: blink 1s infinite;
+    }
+    
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    .countdown {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1e40af;
+    }
+    
+    .countdown.warning {
+      color: #dc2626;
+    }
+    
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    
+    table th, table td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    table th {
+      background-color: #f5f5f5;
+      font-weight: bold;
+    }
+    
+    .status-badge {
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .on-pitch {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    
+    .on-bench {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Setup screen -->
+    <div id="setup-screen">
+      <h1>Soccer Substitution Manager</h1>
+      <div>
+        <h2>Team Setup</h2>
+        <div>
+          <input type="text" id="player-name" placeholder="Enter player name">
+          <button class="primary-btn" id="add-player-btn">Add</button>
+        </div>
+        
+        <h3>Players (<span id="player-count">0</span>)</h3>
+        <div id="player-list" class="player-list"></div>
+      </div>
+      
+      <div>
+        <div>
+          <label for="players-on-pitch">Players on pitch at once:</label>
+          <input type="number" id="players-on-pitch" min="1" value="7">
+        </div>
+        
+        <div>
+          <label for="substitution-interval">Substitution interval (minutes):</label>
+          <input type="number" id="substitution-interval" min="1" value="5">
+        </div>
+        
+        <div>
+          <label for="players-to-rotate">Number of players to rotate each time:</label>
+          <input type="number" id="players-to-rotate" min="1" value="2">
+        </div>
+      </div>
+      
+      <div>
+        <button id="start-game-btn" class="success-btn">Start Game</button>
+      </div>
+    </div>
+    
+    <!-- Game screen (hidden initially) -->
+    <div id="game-screen" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Soccer Substitution Manager</h1>
+        <div id="game-time" style="font-size: 20px; font-weight: bold;">0 min</div>
+      </div>
+      
+      <div>
+        <h2>Current Lineup (<span id="lineup-count">0</span>)</h2>
+        <div id="current-lineup" class="lineup-container"></div>
+      </div>
+      
+      <div>
+        <h2>Bench (<span id="bench-count">0</span>)</h2>
+        <div id="bench" class="bench-container"></div>
+      </div>
+      
+      <div class="button-row">
+        <button id="pause-btn" class="warning-btn">Pause</button>
+        <button id="manual-sub-btn" class="primary-btn">Manual Substitution</button>
+        <button id="skip-btn" class="success-btn">Skip to Next Rotation</button>
+        <button id="demo-minute-btn" class="dark-btn">+1 Minute (Demo)</button>
+        <button id="reset-btn" class="danger-btn">Reset Game</button>
+      </div>
+      
+      <div style="background-color: #f0f0f0; padding: 15px; border-radius: 4px; margin-top: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <p style="font-weight: bold; font-size: 18px;">Next substitution in:</p>
+            <div id="countdown" class="countdown">0:00</div>
+            <p id="imminent-msg" style="color: #dc2626; font-weight: bold; display: none;">Substitution imminent!</p>
+          </div>
+          <div>
+            <p style="font-weight: bold;">Queue system: All players rotate equally!</p>
+            <p>Players rotating each time: <span id="rotation-count" style="font-weight: bold;">2</span></p>
+            <p>Players who have been on the pitch longest will be subbed out first.</p>
+            <p>Players who have been on the bench longest will enter first.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div style="background-color: white; padding: 15px; border-radius: 4px; margin-top: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3>Player Stats</h3>
+        <table id="player-stats">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Status</th>
+              <th>Substitutions</th>
+              <th>Time On Pitch</th>
+              <th>Time On Bench</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State variables
+    let players = [];
+    let playerName = '';
+    let playersOnPitch = 7;
+    let substitutionInterval = 5;
+    let playersToRotate = 2;
+    let currentTime = 0;
+    let isRunning = false;
+    let setupComplete = false;
+    let countdown = 0;
+    let isBlinking = false;
+    let currentLineup = [];
+    let bench = [];
+    let playerStats = {};
+    let timer = null;
+
+    // DOM elements
+    const setupScreen = document.getElementById('setup-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const playerNameInput = document.getElementById('player-name');
+    const addPlayerBtn = document.getElementById('add-player-btn');
+    const playerList = document.getElementById('player-list');
+    const playerCountEl = document.getElementById('player-count');
+    const playersOnPitchInput = document.getElementById('players-on-pitch');
+    const substitutionIntervalInput = document.getElementById('substitution-interval');
+    const playersToRotateInput = document.getElementById('players-to-rotate');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const manualSubBtn = document.getElementById('manual-sub-btn');
+    const skipBtn = document.getElementById('skip-btn');
+    const demoMinuteBtn = document.getElementById('demo-minute-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const currentLineupEl = document.getElementById('current-lineup');
+    const benchEl = document.getElementById('bench');
+    const lineupCountEl = document.getElementById('lineup-count');
+    const benchCountEl = document.getElementById('bench-count');
+    const countdownEl = document.getElementById('countdown');
+    const imminentMsgEl = document.getElementById('imminent-msg');
+    const gameTimeEl = document.getElementById('game-time');
+    const rotationCountEl = document.getElementById('rotation-count');
+    const playerStatsTable = document.getElementById('player-stats').querySelector('tbody');
+
+    // Handle adding a new player
+    function handleAddPlayer() {
+      const name = playerNameInput.value.trim();
+      if (name === '') return;
+      
+      players.push(name);
+      playerNameInput.value = '';
+      
+      renderPlayerList();
+    }
+
+    // Handle removing a player
+    function handleRemovePlayer(index) {
+      players.splice(index, 1);
+      renderPlayerList();
+    }
+
+    // Render the player list in setup screen
+    function renderPlayerList() {
+      playerList.innerHTML = '';
+      playerCountEl.textContent = players.length;
+      
+      players.forEach((player, index) => {
+        const playerItem = document.createElement('div');
+        playerItem.className = 'player-item';
+        playerItem.innerHTML = `
+          <span>${player}</span>
+          <button class="remove-btn" style="color: #ef4444; background: none; border: none;">&times;</button>
+        `;
+        
+        playerItem.querySelector('.remove-btn').addEventListener('click', () => handleRemovePlayer(index));
+        playerList.appendChild(playerItem);
+      });
+      
+      // Update start button state
+      startGameBtn.disabled = players.length < playersOnPitch;
+      startGameBtn.className = players.length < playersOnPitch ? 'success-btn disabled' : 'success-btn';
+    }
+
+    // Start the game
+    function startGame() {
+      playersOnPitch = parseInt(playersOnPitchInput.value) || 7;
+      substitutionInterval = parseInt(substitutionIntervalInput.value) || 5;
+      playersToRotate = parseInt(playersToRotateInput.value) || 2;
+      
+      if (players.length < playersOnPitch) {
+        alert(`You need at least ${playersOnPitch} players to start the game!`);
+        return;
+      }
+      
+      // Initialize player stats
+      playerStats = {};
+      players.forEach(player => {
+        playerStats[player] = {
+          timeOnPitch: 0,
+          timeOnBench: 0,
+          substitutions: 0
+        };
+      });
+      
+      // Set up initial lineup and bench
+      currentLineup = players.slice(0, playersOnPitch);
+      bench = players.slice(playersOnPitch);
+      
+      // Update UI
+      setupScreen.style.display = 'none';
+      gameScreen.style.display = 'block';
+      rotationCountEl.textContent = playersToRotate;
+      
+      // Start the timer
+      setupComplete = true;
+      isRunning = true;
+      countdown = substitutionInterval * 60;
+      startTimer();
+      
+      // Render initial state
+      renderGame();
+    }
+
+    // Handle substitutions
+    function makeSubstitution() {
+      if (bench.length === 0) return;
+      
+      // Determine how many players to substitute
+      const numToSubstitute = Math.min(bench.length, playersToRotate, playersOnPitch);
+      
+      // Players coming off the pitch (the ones who've been on longest)
+      const leavingPlayers = currentLineup.slice(0, numToSubstitute);
+      
+      // Remaining players on the pitch
+      const remainingPlayers = currentLineup.slice(numToSubstitute);
+      
+      // Players coming on from the bench (the ones who've been on bench longest)
+      const enteringPlayers = bench.slice(0, numToSubstitute);
+      
+      // Remaining players on the bench
+      const remainingBench = bench.slice(numToSubstitute);
+      
+      // Update player stats
+      leavingPlayers.forEach(player => {
+        playerStats[player].substitutions += 1;
+      });
+      
+      enteringPlayers.forEach(player => {
+        playerStats[player].substitutions += 1;
+      });
+      
+      // Update lineup and bench
+      currentLineup = [...remainingPlayers, ...enteringPlayers];
+      bench = [...remainingBench, ...leavingPlayers];
+      
+      // Reset countdown and blinking
+      countdown = substitutionInterval * 60;
+      isBlinking = false;
+      
+      // Update UI
+      renderGame();
+    }
+
+    // Timer function for countdown and stats
+    function startTimer() {
+      if (timer) clearInterval(timer);
+      
+      timer = setInterval(() => {
+        if (!isRunning) return;
+        
+        // Update countdown
+        countdown--;
+        
+        // Set blinking state when 30 seconds or less remain
+        if (countdown <= 30) {
+          isBlinking = true;
+        } else {
+          isBlinking = false;
+        }
+        
+        // When countdown reaches zero
+        if (countdown <= 0) {
+          // Make substitution
+          if (bench.length > 0) {
+            makeSubstitution();
+          }
+          isBlinking = false;
+          countdown = substitutionInterval * 60;
+        }
+        
+        // Update game time (1/60 of a minute each second)
+        currentTime += (1/60);
+        
+        // Update player stats for time on pitch/bench
+        currentLineup.forEach(player => {
+          playerStats[player].timeOnPitch += 1; // Add one second
+        });
+        
+        bench.forEach(player => {
+          playerStats[player].timeOnBench += 1; // Add one second
+        });
+        
+        // Update UI
+        renderGame();
+      }, 1000);
+    }
+
+    // Demo minute button handler
+    function handleDemoMinute() {
+      // Reduce countdown by 60 seconds
+      countdown -= 60;
+      if (countdown <= 0) {
+        if (bench.length > 0) {
+          makeSubstitution();
+        } else {
+          countdown = substitutionInterval * 60;
+        }
+      }
+      
+      // Increase game time by 1 minute
+      currentTime += 1;
+      
+      // Update player stats
+      currentLineup.forEach(player => {
+        playerStats[player].timeOnPitch += 60;
+      });
+      
+      bench.forEach(player => {
+        playerStats[player].timeOnBench += 60;
+      });
+      
+      // Update UI
+      renderGame();
+    }
+
+    // Reset the game
+    function resetGame() {
+      currentTime = 0;
+      isRunning = false;
+      setupComplete = false;
+      countdown = 0;
+      isBlinking = false;
+      currentLineup = [];
+      bench = [];
+      playerStats = {};
+      
+      if (timer) clearInterval(timer);
+      
+      // Show setup screen again
+      setupScreen.style.display = 'block';
+      gameScreen.style.display = 'none';
+    }
+
+    // Format time as MM:SS
+    function formatTime(timeInMinutes) {
+      const minutes = Math.floor(timeInMinutes);
+      return `${minutes} min`;
+    }
+
+    // Format countdown as MM:SS
+    function formatCountdown(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    // Format player time stats as MM:SS
+    function formatPlayerTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    // Render game state
+    function renderGame() {
+      // Update counts
+      lineupCountEl.textContent = currentLineup.length;
+      benchCountEl.textContent = bench.length;
+      
+      // Update lineup
+      currentLineupEl.innerHTML = '';
+      currentLineup.forEach((player, index) => {
+        const playerEl = document.createElement('div');
+        playerEl.className = 'player-item';
+        if (index < playersToRotate) {
+          playerEl.classList.add('leaving');
+          if (isBlinking) {
+            playerEl.classList.add('blinking');
+          }
+        }
+        playerEl.textContent = player + (index < playersToRotate ? ' (Next to leave)' : '');
+        currentLineupEl.appendChild(playerEl);
+      });
+      
+      // Update bench
+      benchEl.innerHTML = '';
+      bench.forEach((player, index) => {
+        const playerEl = document.createElement('div');
+        playerEl.className = 'player-item';
+        if (index < playersToRotate) {
+          playerEl.classList.add('entering');
+        }
+        playerEl.textContent = player + (index < playersToRotate ? ' (Next to enter)' : '');
+        benchEl.appendChild(playerEl);
+      });
+      
+      // Update countdown
+      countdownEl.textContent = formatCountdown(countdown);
+      if (isBlinking) {
+        countdownEl.classList.add('warning');
+        imminentMsgEl.style.display = 'block';
+      } else {
+        countdownEl.classList.remove('warning');
+        imminentMsgEl.style.display = 'none';
+      }
+      
+      // Update game time
+      gameTimeEl.textContent = formatTime(currentTime);
+      
+      // Update pause button text
+      pauseBtn.textContent = isRunning ? 'Pause' : 'Resume';
+      
+      // Update player stats table
+      playerStatsTable.innerHTML = '';
+      players.forEach(player => {
+        const row = document.createElement('tr');
+        const isOnPitch = currentLineup.includes(player);
+        
+        row.innerHTML = `
+          <td>${player}</td>
+          <td><span class="status-badge ${isOnPitch ? 'on-pitch' : 'on-bench'}">${isOnPitch ? 'On Pitch' : 'On Bench'}</span></td>
+          <td>${playerStats[player]?.substitutions || 0}</td>
+          <td>${formatPlayerTime(playerStats[player]?.timeOnPitch || 0)}</td>
+          <td>${formatPlayerTime(playerStats[player]?.timeOnBench || 0)}</td>
+        `;
+        
+        playerStatsTable.appendChild(row);
+      });
+      
+      // Update button states
+      manualSubBtn.disabled = bench.length === 0;
+      skipBtn.disabled = bench.length === 0;
+      manualSubBtn.className = bench.length === 0 ? 'primary-btn disabled' : 'primary-btn';
+      skipBtn.className = bench.length === 0 ? 'success-btn disabled' : 'success-btn';
+    }
+
+    // Event listeners
+    addPlayerBtn.addEventListener('click', handleAddPlayer);
+    playerNameInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleAddPlayer();
+    });
+    startGameBtn.addEventListener('click', startGame);
+    pauseBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      if (isRunning) startTimer();
+      renderGame();
+    });
+    manualSubBtn.addEventListener('click', makeSubstitution);
+    skipBtn.addEventListener('click', () => {
+      countdown = 0;
+      if (!isRunning) {
+        makeSubstitution();
+      }
+      renderGame();
+    });
+    demoMinuteBtn.addEventListener('click', handleDemoMinute);
+    resetBtn.addEventListener('click', resetGame);
+
+    // Input change handlers
+    playersOnPitchInput.addEventListener('change', () => {
+      playersOnPitch = parseInt(playersOnPitchInput.value) || 7;
+      // Make sure players to rotate doesn't exceed players on pitch
+      if (playersToRotate > playersOnPitch) {
+        playersToRotate = playersOnPitch;
+        playersToRotateInput.value = playersToRotate;
+      }
+      renderPlayerList();
+    });
+
+    playersToRotateInput.addEventListener('change', () => {
+      const value = parseInt(playersToRotateInput.value) || 1;
+      playersToRotate = Math.min(value, playersOnPitch);
+      playersToRotateInput.value = playersToRotate;
+    });
+
+    // Initial render
+    renderPlayerList();
+  </script>
+</body>
+</html>
