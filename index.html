@@ -182,6 +182,22 @@
       font-weight: bold;
       cursor: pointer;
     }
+
+    .lineup-container .player-item {
+      cursor: pointer;
+      transition: transform 0.1s, background-color 0.1s;
+    }
+
+    .lineup-container .player-item:active {
+      transform: scale(0.97);
+      background-color: #f3f4f6;
+    }
+
+    .tap-hint {
+      color: #9ca3af;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
     
     /* Countdown */
     .countdown-container {
@@ -748,7 +764,9 @@
             playerEl.classList.add('blinking');
           }
         }
-        playerEl.textContent = player + (index < playersToRotate ? ' ↑' : '');
+        const arrow = index < playersToRotate ? ' ↑' : '';
+        const chevron = player === selectedPitchPlayer ? '✕' : '›';
+        playerEl.innerHTML = `<span>${player}${arrow}</span><span class="tap-hint">${chevron}</span>`;
         playerEl.addEventListener('click', () => {
           selectedPitchPlayer = (selectedPitchPlayer === player) ? null : player;
           renderGame();
