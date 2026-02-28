@@ -734,6 +734,7 @@
     function swapPlayers(pitchPlayer, benchPlayer) {
       const pitchIndex = currentLineup.indexOf(pitchPlayer);
       const benchIndex = bench.indexOf(benchPlayer);
+      if (pitchIndex === -1 || benchIndex === -1) return;
       currentLineup[pitchIndex] = benchPlayer;
       bench[benchIndex] = pitchPlayer;
       playerStats[pitchPlayer].substitutions += 1;
@@ -767,10 +768,12 @@
         const arrow = index < playersToRotate ? ' ↑' : '';
         const chevron = player === selectedPitchPlayer ? '✕' : '›';
         playerEl.innerHTML = `<span>${player}${arrow}</span><span class="tap-hint">${chevron}</span>`;
-        playerEl.addEventListener('click', () => {
+        const handlePitchTap = () => {
           selectedPitchPlayer = (selectedPitchPlayer === player) ? null : player;
           renderGame();
-        });
+        };
+        playerEl.addEventListener('touchend', (e) => { e.preventDefault(); handlePitchTap(); });
+        playerEl.addEventListener('click', handlePitchTap);
         currentLineupEl.appendChild(playerEl);
       });
       
@@ -785,9 +788,9 @@
         playerEl.textContent = player + (index < playersToRotate ? ' ↓' : '');
         if (selectedPitchPlayer) {
           playerEl.style.cursor = 'pointer';
-          playerEl.addEventListener('click', () => {
-            swapPlayers(selectedPitchPlayer, player);
-          });
+          const handleBenchTap = () => { swapPlayers(selectedPitchPlayer, player); };
+          playerEl.addEventListener('touchend', (e) => { e.preventDefault(); handleBenchTap(); });
+          playerEl.addEventListener('click', handleBenchTap);
         }
         benchEl.appendChild(playerEl);
       });
@@ -896,17 +899,6 @@
       });
     });
 
-    // Prevent double-tap zoom on iOS
-    document.addEventListener('touchend', function(event) {
-      const now = Date.now();
-      const DOUBLE_TAP_THRESHOLD = 300;
-      if (lastTap && (now - lastTap) < DOUBLE_TAP_THRESHOLD) {
-        event.preventDefault();
-      }
-      lastTap = now;
-    }, false);
-    
-    let lastTap = 0;
 
     // Initial render
     renderPlayerList();
