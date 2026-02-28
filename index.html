@@ -175,6 +175,13 @@
       50% { opacity: 0.5; }
       100% { opacity: 1; }
     }
+
+    .selected {
+      background-color: #fde68a;
+      border: 2px solid #f59e0b;
+      font-weight: bold;
+      cursor: pointer;
+    }
     
     /* Countdown */
     .countdown-container {
@@ -396,6 +403,7 @@
       
       <div>
         <h2>Current Lineup (<span id="lineup-count">0</span>)</h2>
+        <p id="swap-hint" style="display:none; color:#92400e; font-weight:bold; margin:4px 0 8px;">Tap a bench player to swap</p>
         <div id="current-lineup" class="lineup-container"></div>
       </div>
       
@@ -443,6 +451,7 @@
     let bench = [];
     let playerStats = {};
     let timer = null;
+    let selectedPitchPlayer = null;
 
     // DOM elements
     const setupScreen = document.getElementById('setup-screen');
@@ -469,6 +478,7 @@
     const gameTimeEl = document.getElementById('game-time');
     const rotationCountEl = document.getElementById('rotation-count');
     const playerStatsMobileEl = document.getElementById('player-stats-mobile');
+    const swapHintEl = document.getElementById('swap-hint');
 
     // Handle adding a new player
     function handleAddPlayer() {
@@ -582,9 +592,10 @@
       currentLineup = [...remainingPlayers, ...enteringPlayers];
       bench = [...remainingBench, ...leavingPlayers];
       
-      // Reset countdown and blinking
+      // Reset countdown, blinking, and any pending tap selection
       countdown = substitutionInterval * 60;
       isBlinking = false;
+      selectedPitchPlayer = null;
       
       // Update UI
       renderGame();
@@ -674,6 +685,7 @@
       currentLineup = [];
       bench = [];
       playerStats = {};
+      selectedPitchPlayer = null;
       
       if (timer) clearInterval(timer);
       
@@ -702,24 +714,45 @@
       return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
 
+    // Ad-hoc swap of a specific pitch player with a specific bench player
+    function swapPlayers(pitchPlayer, benchPlayer) {
+      const pitchIndex = currentLineup.indexOf(pitchPlayer);
+      const benchIndex = bench.indexOf(benchPlayer);
+      currentLineup[pitchIndex] = benchPlayer;
+      bench[benchIndex] = pitchPlayer;
+      playerStats[pitchPlayer].substitutions += 1;
+      playerStats[benchPlayer].substitutions += 1;
+      selectedPitchPlayer = null;
+      renderGame();
+    }
+
     // Render game state
     function renderGame() {
       // Update counts
       lineupCountEl.textContent = currentLineup.length;
       benchCountEl.textContent = bench.length;
       
+      // Update swap hint
+      swapHintEl.style.display = selectedPitchPlayer ? 'block' : 'none';
+
       // Update lineup
       currentLineupEl.innerHTML = '';
       currentLineup.forEach((player, index) => {
         const playerEl = document.createElement('div');
         playerEl.className = 'player-item';
-        if (index < playersToRotate) {
+        if (player === selectedPitchPlayer) {
+          playerEl.classList.add('selected');
+        } else if (index < playersToRotate) {
           playerEl.classList.add('leaving');
           if (isBlinking) {
             playerEl.classList.add('blinking');
           }
         }
         playerEl.textContent = player + (index < playersToRotate ? ' ↑' : '');
+        playerEl.addEventListener('click', () => {
+          selectedPitchPlayer = (selectedPitchPlayer === player) ? null : player;
+          renderGame();
+        });
         currentLineupEl.appendChild(playerEl);
       });
       
@@ -732,6 +765,12 @@
           playerEl.classList.add('entering');
         }
         playerEl.textContent = player + (index < playersToRotate ? ' ↓' : '');
+        if (selectedPitchPlayer) {
+          playerEl.style.cursor = 'pointer';
+          playerEl.addEventListener('click', () => {
+            swapPlayers(selectedPitchPlayer, player);
+          });
+        }
         benchEl.appendChild(playerEl);
       });
       
