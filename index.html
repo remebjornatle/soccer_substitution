@@ -183,6 +183,24 @@
       cursor: pointer;
     }
 
+    .bench-selectable {
+      background-color: #fef9c3;
+      border: 2px dashed #f59e0b;
+      cursor: pointer;
+    }
+
+    .feature-tag {
+      display: inline-block;
+      background-color: #e0f2fe;
+      color: #0369a1;
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
     .lineup-container .player-item {
       cursor: pointer;
       transition: transform 0.1s, background-color 0.1s;
@@ -418,7 +436,7 @@
       </div>
       
       <div>
-        <h2>Current Lineup (<span id="lineup-count">0</span>)</h2>
+        <h2>Current Lineup (<span id="lineup-count">0</span>) <span class="feature-tag" title="Tap a player to do an emergency swap">Tap to swap</span></h2>
         <p id="swap-hint" style="display:none; color:#92400e; font-weight:bold; margin:4px 0 8px;">Tap a bench player to swap</p>
         <div id="current-lineup" class="lineup-container"></div>
       </div>
@@ -736,7 +754,8 @@
       const benchIndex = bench.indexOf(benchPlayer);
       if (pitchIndex === -1 || benchIndex === -1) return;
       currentLineup[pitchIndex] = benchPlayer;
-      bench[benchIndex] = pitchPlayer;
+      bench.splice(benchIndex, 1);
+      bench.push(pitchPlayer);
       playerStats[pitchPlayer].substitutions += 1;
       playerStats[benchPlayer].substitutions += 1;
       selectedPitchPlayer = null;
@@ -787,7 +806,7 @@
         }
         playerEl.textContent = player + (index < playersToRotate ? ' ↓' : '');
         if (selectedPitchPlayer) {
-          playerEl.style.cursor = 'pointer';
+          playerEl.classList.add('bench-selectable');
           const handleBenchTap = () => { swapPlayers(selectedPitchPlayer, player); };
           playerEl.addEventListener('touchend', (e) => { e.preventDefault(); handleBenchTap(); });
           playerEl.addEventListener('click', handleBenchTap);
