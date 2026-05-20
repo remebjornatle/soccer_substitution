@@ -273,6 +273,71 @@
     }
     .info-box p { margin: 8px 0; }
 
+    .pending-banner {
+      background-color: #fef3c7;
+      border: 3px solid #f59e0b;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .pending-banner h3 {
+      margin: 0 0 12px;
+      color: #92400e;
+      font-size: 1.3rem;
+    }
+
+    .pending-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .pending-leaving-col {
+      background-color: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .pending-entering-col {
+      background-color: #d1fae5;
+      border: 1px solid #6ee7b7;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .pending-col-label {
+      font-weight: bold;
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .pending-player-name {
+      font-weight: bold;
+      font-size: 1.05rem;
+      padding: 4px 0;
+    }
+
+    .confirm-sub-btn {
+      background-color: #10b981;
+      color: white;
+      font-size: 1.15rem;
+      padding: 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 12px;
+      display: block;
+    }
+
     @media (max-width: 360px) {
       body { padding: 12px; }
       h1   { font-size: 1.5rem; }
@@ -347,6 +412,23 @@
         <p id="imminent-msg" style="color: #dc2626; font-weight: bold; display: none; margin-bottom: 0;">Substitution imminent!</p>
       </div>
 
+      <div id="pending-sub" style="display:none;">
+        <div class="pending-banner">
+          <h3>Substitution Time!</h3>
+          <div class="pending-columns">
+            <div class="pending-leaving-col">
+              <div class="pending-col-label">Coming Off ↑</div>
+              <div id="pending-leaving-list"></div>
+            </div>
+            <div class="pending-entering-col">
+              <div class="pending-col-label">Coming On ↓</div>
+              <div id="pending-entering-list"></div>
+            </div>
+          </div>
+          <button id="confirm-sub-btn" class="confirm-sub-btn">✓ Confirm Substitution</button>
+        </div>
+      </div>
+
       <div>
         <h2>
           Current Lineup (<span id="lineup-count">0</span>)
@@ -403,8 +485,9 @@
     let bench               = [];
     let playerStats         = {};
     let timer               = null;
-    let selectedPitchPlayer = null;
-    let swapGoalieMode      = false;
+    let selectedPitchPlayer  = null;
+    let swapGoalieMode       = false;
+    let pendingSubstitution  = false;
 
     // ── DOM refs ────────────────────────────────────────────────────────────
     const setupScreen              = document.getElementById('setup-screen');
@@ -434,12 +517,17 @@
     const playerStatsMobileEl      = document.getElementById('player-stats-mobile');
     const swapHintEl               = document.getElementById('swap-hint');
     const swapGoalieHintEl         = document.getElementById('swap-goalie-hint');
+    const pendingSubEl             = document.getElementById('pending-sub');
+    const pendingLeavingListEl     = document.getElementById('pending-leaving-list');
+    const pendingEnteringListEl    = document.getElementById('pending-entering-list');
+    const confirmSubBtn            = document.getElementById('confirm-sub-btn');
 
     // ── Persistence ─────────────────────────────────────────────────────────
     function saveState() {
       localStorage.setItem('soccerSub', JSON.stringify({
         players, goaliePlayer, playersOnPitch, substitutionInterval, playersToRotate,
-        currentTime, setupComplete, countdown, isBlinking, currentLineup, bench, playerStats
+        currentTime, setupComplete, countdown, isBlinking, currentLineup, bench, playerStats,
+        pendingSubstitution
         // isRunning intentionally omitted: always restore as paused
       }));
     }
@@ -461,6 +549,7 @@
         currentLineup        = s.currentLineup;
         bench                = s.bench;
         playerStats          = s.playerStats;
+        pendingSubstitution  = s.pendingSubstitution ?? false;
         isRunning            = false;
         return true;
       } catch (e) {
@@ -571,6 +660,7 @@
     // ── Substitution ────────────────────────────────────────────────────────
     function makeSubstitution() {
       if (bench.length === 0) return;
+      pendingSubstitution = false;
 
       // Work only with non-goalie pitch players
       const fieldOnPitch = currentLineup.filter(p => p !== goaliePlayer);
@@ -601,27 +691,31 @@
     function startTimer() {
       if (timer) clearInterval(timer);
       timer = setInterval(() => {
-        if (!isRunning) return;
+        if (!isRunning || pendingSubstitution) return;
 
         countdown--;
-
         isBlinking = countdown <= 30;
 
         if (countdown <= 0) {
-          if (bench.length > 0) makeSubstitution();
-          else countdown = substitutionInterval * 60;
+          countdown = 0;
           isBlinking = false;
-          return; // makeSubstitution already calls renderGame
+          if (bench.length > 0) {
+            pendingSubstitution = true;
+            swapGoalieMode      = false;
+            selectedPitchPlayer = null;
+          } else {
+            countdown = substitutionInterval * 60;
+          }
+          saveState();
+          renderGame();
+          return;
         }
 
         currentTime += 1 / 60;
-
         currentLineup.forEach(p => playerStats[p].timeOnPitch++);
         bench.forEach(p         => playerStats[p].timeOnBench++);
 
-        // Save every 60 ticks (once per minute) to avoid hammering localStorage
         if (Math.round(currentTime * 60) % 60 === 0) saveState();
-
         renderGame();
       }, 1000);
     }
@@ -700,7 +794,7 @@
       currentTime = 0; isRunning = false; setupComplete = false;
       countdown = 0; isBlinking = false;
       currentLineup = []; bench = []; playerStats = {};
-      selectedPitchPlayer = null; swapGoalieMode = false;
+      selectedPitchPlayer = null; swapGoalieMode = false; pendingSubstitution = false;
 
       playersOnPitchInput.value       = 7;
       substitutionIntervalInput.value = 5;
@@ -733,10 +827,23 @@
       lineupCountEl.textContent = currentLineup.length;
       benchCountEl.textContent  = bench.length;
 
+      // ── Pending substitution panel ──
+      if (pendingSubstitution && bench.length > 0) {
+        const fieldOnPitch = currentLineup.filter(p => p !== goaliePlayer);
+        const numToSub     = Math.min(bench.length, playersToRotate, fieldOnPitch.length);
+        const leaving      = fieldOnPitch.slice(0, numToSub);
+        const entering     = bench.slice(0, numToSub);
+        pendingLeavingListEl.innerHTML  = leaving.map(p  => `<div class="pending-player-name">${p}</div>`).join('');
+        pendingEnteringListEl.innerHTML = entering.map(p => `<div class="pending-player-name">${p}</div>`).join('');
+        pendingSubEl.style.display = 'block';
+      } else {
+        pendingSubEl.style.display = 'none';
+      }
+
       // Hints
-      swapHintEl.style.display      = (!swapGoalieMode && selectedPitchPlayer) ? 'block' : 'none';
+      swapHintEl.style.display      = (!swapGoalieMode && !pendingSubstitution && selectedPitchPlayer) ? 'block' : 'none';
       swapGoalieHintEl.style.display = swapGoalieMode ? 'block' : 'none';
-      swapGoalieBtn.className        = swapGoalieMode ? 'amber-btn' : 'amber-btn';
+      swapGoalieBtn.className        = 'amber-btn';
       swapGoalieBtn.style.outline    = swapGoalieMode ? '3px solid #92400e' : 'none';
 
       // ── Lineup ──
@@ -769,6 +876,7 @@
         el.innerHTML = `<span>${player}${arrow}${gkBadge}</span><span class="tap-hint">${chevron}</span>`;
 
         const onTap = () => {
+          if (pendingSubstitution) return;
           if (swapGoalieMode) {
             handleSwapGoalieTap(player);
           } else if (!isGoalie) {
@@ -799,6 +907,7 @@
         el.textContent = player + (isEntering && !swapGoalieMode ? ' ↓' : '');
 
         const onTap = () => {
+          if (pendingSubstitution) return;
           if (swapGoalieMode) {
             handleSwapGoalieTap(player);
           } else if (selectedPitchPlayer) {
@@ -885,6 +994,8 @@
       selectedPitchPlayer = null;
       renderGame();
     });
+
+    confirmSubBtn.addEventListener('click', makeSubstitution);
 
     manualSubBtn.addEventListener('click', makeSubstitution);
 
