@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Soccer Substitution Manager</title>
   <style>
-    /* Base styles */
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
     }
-    
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
@@ -19,29 +18,11 @@
       color: #333;
       line-height: 1.5;
     }
-    
-    h1 {
-      font-size: 1.8rem;
-      color: #1e3a8a;
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-    
-    h2 {
-      font-size: 1.4rem;
-      color: #1e3a8a;
-      margin-top: 16px;
-      margin-bottom: 12px;
-    }
-    
-    h3 {
-      font-size: 1.2rem;
-      color: #1e3a8a;
-      margin-top: 16px;
-      margin-bottom: 8px;
-    }
-    
-    /* Form elements */
+
+    h1 { font-size: 1.8rem; color: #1e3a8a; margin-top: 0; margin-bottom: 16px; }
+    h2 { font-size: 1.4rem; color: #1e3a8a; margin-top: 16px; margin-bottom: 12px; }
+    h3 { font-size: 1.2rem; color: #1e3a8a; margin-top: 16px; margin-bottom: 8px; }
+
     input, select {
       display: block;
       width: 100%;
@@ -49,15 +30,11 @@
       margin-bottom: 16px;
       border: 1px solid #ddd;
       border-radius: 8px;
-      font-size: 16px; /* Prevent zoom on iOS */
+      font-size: 16px;
     }
-    
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: bold;
-    }
-    
+
+    label { display: block; margin-bottom: 6px; font-weight: bold; }
+
     button {
       display: block;
       width: 100%;
@@ -70,43 +47,18 @@
       cursor: pointer;
       transition: background-color 0.2s;
     }
-    
-    .primary-btn {
-      background-color: #3b82f6;
-      color: white;
-    }
-    
-    .success-btn {
-      background-color: #10b981;
-      color: white;
-    }
-    
-    .warning-btn {
-      background-color: #f59e0b;
-      color: white;
-    }
-    
-    .danger-btn {
-      background-color: #ef4444;
-      color: white;
-    }
-    
-    .dark-btn {
-      background-color: #4b5563;
-      color: white;
-    }
-    
-    .disabled {
-      background-color: #9ca3af;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-    
-    /* Player lists */
-    .player-list {
-      margin: 16px 0;
-    }
-    
+
+    .primary-btn  { background-color: #3b82f6; color: white; }
+    .success-btn  { background-color: #10b981; color: white; }
+    .warning-btn  { background-color: #f59e0b; color: white; }
+    .danger-btn   { background-color: #ef4444; color: white; }
+    .dark-btn     { background-color: #4b5563; color: white; }
+    .amber-btn    { background-color: #b45309; color: white; }
+
+    .disabled { background-color: #9ca3af; cursor: not-allowed; opacity: 0.7; }
+
+    .player-list { margin: 16px 0; }
+
     .player-item {
       display: flex;
       justify-content: space-between;
@@ -118,7 +70,7 @@
       margin-bottom: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
-    
+
     .remove-btn {
       background: none;
       border: none;
@@ -129,24 +81,36 @@
       width: auto;
       display: inline;
     }
-    
-    /* Game containers */
+
+    .set-gk-btn {
+      background: none;
+      border: 1px solid #f59e0b;
+      color: #92400e;
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 10px;
+      width: auto;
+      margin: 0;
+      cursor: pointer;
+    }
+
     .lineup-container, .bench-container {
       padding: 12px;
       margin: 12px 0;
       border-radius: 8px;
     }
-    
+
     .lineup-container {
       background-color: #d1fae5;
       border: 1px solid #6ee7b7;
     }
-    
+
     .bench-container {
       background-color: #dbeafe;
       border: 1px solid #93c5fd;
     }
-    
+
     .card {
       background-color: white;
       border-radius: 12px;
@@ -154,25 +118,15 @@
       margin-bottom: 16px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    
-    /* Special states */
-    .leaving {
-      background-color: #fef3c7;
-      border: 1px solid #fcd34d;
-    }
-    
-    .entering {
-      background-color: #d1fae5;
-      border: 1px solid #6ee7b7;
-    }
-    
-    .blinking {
-      animation: blink 1s infinite;
-    }
-    
+
+    .leaving  { background-color: #fef3c7; border: 1px solid #fcd34d; }
+    .entering { background-color: #d1fae5; border: 1px solid #6ee7b7; }
+
+    .blinking { animation: blink 1s infinite; }
+
     @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
+      0%   { opacity: 1; }
+      50%  { opacity: 0.5; }
       100% { opacity: 1; }
     }
 
@@ -187,6 +141,40 @@
       background-color: #fef9c3;
       border: 2px dashed #f59e0b;
       cursor: pointer;
+    }
+
+    /* Goalie styles */
+    .goalie-border { border: 2px solid #f59e0b !important; }
+
+    .gk-badge {
+      display: inline-block;
+      background-color: #fef3c7;
+      color: #92400e;
+      font-size: 0.7rem;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 6px;
+      border: 1px solid #fcd34d;
+      vertical-align: middle;
+    }
+
+    /* Swap goalie mode */
+    .goalie-selectable {
+      background-color: #fffbeb;
+      border: 2px dashed #f59e0b !important;
+      cursor: pointer;
+    }
+
+    .swap-goalie-hint {
+      background-color: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      color: #92400e;
+      font-weight: bold;
+      font-size: 0.95rem;
     }
 
     .feature-tag {
@@ -206,18 +194,10 @@
       transition: transform 0.1s, background-color 0.1s;
     }
 
-    .lineup-container .player-item:active {
-      transform: scale(0.97);
-      background-color: #f3f4f6;
-    }
+    .lineup-container .player-item:active { transform: scale(0.97); background-color: #f3f4f6; }
 
-    .tap-hint {
-      color: #9ca3af;
-      font-size: 1.1rem;
-      line-height: 1;
-    }
-    
-    /* Countdown */
+    .tap-hint { color: #9ca3af; font-size: 1.1rem; line-height: 1; }
+
     .countdown-container {
       text-align: center;
       padding: 16px;
@@ -225,25 +205,17 @@
       background-color: #f0f0f0;
       border-radius: 12px;
     }
-    
-    .countdown {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: #1e40af;
-    }
-    
-    .countdown.warning {
-      color: #dc2626;
-    }
-    
-    /* Game info */
+
+    .countdown { font-size: 2.5rem; font-weight: bold; color: #1e40af; }
+    .countdown.warning { color: #dc2626; }
+
     .game-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
     }
-    
+
     .game-time {
       font-size: 1.2rem;
       font-weight: bold;
@@ -252,12 +224,9 @@
       padding: 8px 12px;
       border-radius: 8px;
     }
-    
-    /* Player stats mobile-friendly view */
-    .stats-container {
-      margin-top: 16px;
-    }
-    
+
+    .stats-container { margin-top: 16px; }
+
     .player-stat-card {
       background-color: white;
       border-radius: 8px;
@@ -265,35 +234,20 @@
       margin-bottom: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
-    
-    .player-name {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    
+
+    .player-name { font-weight: bold; font-size: 1.1rem; }
+
     .player-stat-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
       margin-top: 8px;
     }
-    
-    .stat-item {
-      background-color: #f9fafb;
-      padding: 8px;
-      border-radius: 6px;
-    }
-    
-    .stat-label {
-      font-size: 0.8rem;
-      color: #6b7280;
-    }
-    
-    .stat-value {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    
+
+    .stat-item { background-color: #f9fafb; padding: 8px; border-radius: 6px; }
+    .stat-label { font-size: 0.8rem; color: #6b7280; }
+    .stat-value { font-weight: bold; font-size: 1.1rem; }
+
     .status-badge {
       display: inline-block;
       padding: 4px 8px;
@@ -302,38 +256,14 @@
       font-weight: bold;
       margin-left: 8px;
     }
-    
-    .on-pitch {
-      background-color: #d1fae5;
-      color: #065f46;
-    }
-    
-    .on-bench {
-      background-color: #dbeafe;
-      color: #1e40af;
-    }
-    
-    /* Input group for adding players */
-    .input-group {
-      display: flex;
-      margin-bottom: 16px;
-    }
-    
-    .input-group input {
-      flex: 1;
-      margin-bottom: 0;
-      border-top-right-radius: 0;
-      border-bottom-right-radius: 0;
-    }
-    
-    .input-group button {
-      width: auto;
-      margin-bottom: 0;
-      border-top-left-radius: 0;
-      border-bottom-left-radius: 0;
-    }
-    
-    /* Info box */
+
+    .on-pitch { background-color: #d1fae5; color: #065f46; }
+    .on-bench  { background-color: #dbeafe; color: #1e40af; }
+
+    .input-group { display: flex; margin-bottom: 16px; }
+    .input-group input  { flex: 1; margin-bottom: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .input-group button { width: auto; margin-bottom: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
     .info-box {
       background-color: #eff6ff;
       border: 1px solid #bfdbfe;
@@ -341,38 +271,21 @@
       padding: 12px;
       margin-bottom: 16px;
     }
-    
-    .info-box p {
-      margin: 8px 0;
-    }
-    
-    /* For small phones */
+    .info-box p { margin: 8px 0; }
+
     @media (max-width: 360px) {
-      body {
-        padding: 12px;
-      }
-      
-      h1 {
-        font-size: 1.5rem;
-      }
-      
-      .countdown {
-        font-size: 2rem;
-      }
+      body { padding: 12px; }
+      h1   { font-size: 1.5rem; }
+      .countdown { font-size: 2rem; }
     }
-    
-    /* For larger devices */
+
     @media (min-width: 768px) {
       .button-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
       }
-      
-      .button-grid button {
-        margin-bottom: 0;
-      }
-      
+      .button-grid button { margin-bottom: 0; }
       .player-stats-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -386,82 +299,87 @@
     <!-- Setup screen -->
     <div id="setup-screen">
       <h1>Soccer Substitution Manager</h1>
-      
+
       <div class="card">
-        <h2>Team members (add the starting line first)</h2>
+        <h2>Team members</h2>
+        <p style="margin-top:0;color:#6b7280;font-size:0.9rem;">First player added becomes goalkeeper. Tap "Set GK" to reassign.</p>
         <div class="input-group">
           <input type="text" id="player-name" placeholder="Enter player name">
           <button class="primary-btn" id="add-player-btn">Add</button>
         </div>
-        
+
         <h3>Players (<span id="player-count">0</span>)</h3>
         <div id="player-list" class="player-list"></div>
       </div>
-      
+
       <div class="card">
         <h2>Game Settings</h2>
-        
+
         <div>
-          <label for="players-on-pitch">How many players on pitch?</label>
-          <input type="number" id="players-on-pitch" min="1" value="7">
+          <label for="players-on-pitch">Players on pitch (including GK)?</label>
+          <input type="number" id="players-on-pitch" min="2" value="7">
         </div>
-        
+
         <div>
           <label for="substitution-interval">Substitution interval (minutes)?</label>
           <input type="number" id="substitution-interval" min="1" value="5">
         </div>
-        
+
         <div>
-          <label for="players-to-rotate">Number of players to rotate each time?</label>
+          <label for="players-to-rotate">Players to rotate each time?</label>
           <input type="number" id="players-to-rotate" min="1" value="2">
         </div>
       </div>
-      
+
       <button id="start-game-btn" class="success-btn">Start Game</button>
     </div>
-    
-    <!-- Game screen (hidden initially) -->
+
+    <!-- Game screen -->
     <div id="game-screen" style="display: none;">
       <div class="game-header">
-        <h1>Soccer Substitution</h1>
+        <h1 style="font-size:1.4rem;margin-bottom:0;">Soccer Sub Manager</h1>
         <div id="game-time" class="game-time">0 min</div>
       </div>
-      
+
       <div class="countdown-container">
-        <div>
-          <p style="margin-top: 0; font-weight: bold;">Next substitution in:</p>
-          <div id="countdown" class="countdown">0:00</div>
-          <p id="imminent-msg" style="color: #dc2626; font-weight: bold; display: none; margin-bottom: 0;">Substitution imminent!</p>
-        </div>
+        <p style="margin-top: 0; font-weight: bold;">Next substitution in:</p>
+        <div id="countdown" class="countdown">0:00</div>
+        <p id="imminent-msg" style="color: #dc2626; font-weight: bold; display: none; margin-bottom: 0;">Substitution imminent!</p>
       </div>
-      
+
       <div>
-        <h2>Current Lineup (<span id="lineup-count">0</span>) <span class="feature-tag" title="Tap a player to do an emergency swap">Tap to quick-swap</span></h2>
-        <p id="swap-hint" style="display:none; color:#92400e; font-weight:bold; margin:4px 0 8px;">Tap a bench player to swap</p>
+        <h2>
+          Current Lineup (<span id="lineup-count">0</span>)
+          <span class="feature-tag" title="Tap a player to do an emergency swap">Tap to quick-swap</span>
+        </h2>
+        <p id="swap-hint"        style="display:none; color:#92400e; font-weight:bold; margin:4px 0 8px;">Tap a bench player to swap</p>
+        <div id="swap-goalie-hint" class="swap-goalie-hint" style="display:none;">
+          Tap any player to become the new goalkeeper. Tap current GK to cancel.
+        </div>
         <div id="current-lineup" class="lineup-container"></div>
       </div>
-      
+
       <div>
         <h2>Bench (<span id="bench-count">0</span>)</h2>
         <div id="bench" class="bench-container"></div>
       </div>
-      
+
       <div class="info-box">
-        <p style="font-weight: bold; margin-top: 0;">Queue system: All players rotate equally!</p>
-        <p>Players rotating each time: <span id="rotation-count" style="font-weight: bold;">2</span></p>
-        <p>Players who have been on the pitch longest will be subbed out first.</p>
-        <p style="margin-bottom: 0;">Players who have been on the bench longest will enter first.</p>
+        <p style="font-weight: bold; margin-top: 0;">Queue system: All field players rotate equally!</p>
+        <p>Rotating each time: <span id="rotation-count" style="font-weight: bold;">2</span></p>
+        <p style="margin-bottom: 0;">Goalkeeper is always on pitch. Use "Swap GK" to change goalkeeper.</p>
       </div>
-      
+
       <div class="button-grid">
-        <button id="pause-btn" class="warning-btn">Pause</button>
-        <button id="manual-sub-btn" class="primary-btn">Manual Sub</button>
-        <button id="skip-btn" class="success-btn">Skip to Next</button>
+        <button id="pause-btn"       class="warning-btn">Pause</button>
+        <button id="swap-goalie-btn" class="amber-btn">Swap GK</button>
+        <button id="manual-sub-btn"  class="primary-btn">Manual Sub</button>
+        <button id="skip-btn"        class="success-btn">Skip to Next</button>
         <button id="demo-minute-btn" class="dark-btn">+1 Minute</button>
       </div>
-      
+
       <button id="reset-btn" class="danger-btn" style="margin-top: 12px;">Reset Game</button>
-      
+
       <div class="stats-container">
         <h2>Player Stats</h2>
         <div id="player-stats-mobile"></div>
@@ -470,351 +388,429 @@
   </div>
 
   <script>
-    // State variables
-    let players = [];
-    let playerName = '';
-    let playersOnPitch = 7;
+    // ── State ───────────────────────────────────────────────────────────────
+    let players             = [];
+    let goaliePlayer        = null;
+    let playersOnPitch      = 7;
     let substitutionInterval = 5;
-    let playersToRotate = 2;
-    let currentTime = 0;
-    let isRunning = false;
-    let setupComplete = false;
-    let countdown = 0;
-    let isBlinking = false;
-    let currentLineup = [];
-    let bench = [];
-    let playerStats = {};
-    let timer = null;
+    let playersToRotate     = 2;
+    let currentTime         = 0;
+    let isRunning           = false;
+    let setupComplete       = false;
+    let countdown           = 0;
+    let isBlinking          = false;
+    let currentLineup       = [];
+    let bench               = [];
+    let playerStats         = {};
+    let timer               = null;
     let selectedPitchPlayer = null;
+    let swapGoalieMode      = false;
 
-    // DOM elements
-    const setupScreen = document.getElementById('setup-screen');
-    const gameScreen = document.getElementById('game-screen');
-    const playerNameInput = document.getElementById('player-name');
-    const addPlayerBtn = document.getElementById('add-player-btn');
-    const playerList = document.getElementById('player-list');
-    const playerCountEl = document.getElementById('player-count');
-    const playersOnPitchInput = document.getElementById('players-on-pitch');
-    const substitutionIntervalInput = document.getElementById('substitution-interval');
-    const playersToRotateInput = document.getElementById('players-to-rotate');
-    const startGameBtn = document.getElementById('start-game-btn');
-    const pauseBtn = document.getElementById('pause-btn');
-    const manualSubBtn = document.getElementById('manual-sub-btn');
-    const skipBtn = document.getElementById('skip-btn');
-    const demoMinuteBtn = document.getElementById('demo-minute-btn');
-    const resetBtn = document.getElementById('reset-btn');
-    const currentLineupEl = document.getElementById('current-lineup');
-    const benchEl = document.getElementById('bench');
-    const lineupCountEl = document.getElementById('lineup-count');
-    const benchCountEl = document.getElementById('bench-count');
-    const countdownEl = document.getElementById('countdown');
-    const imminentMsgEl = document.getElementById('imminent-msg');
-    const gameTimeEl = document.getElementById('game-time');
-    const rotationCountEl = document.getElementById('rotation-count');
-    const playerStatsMobileEl = document.getElementById('player-stats-mobile');
-    const swapHintEl = document.getElementById('swap-hint');
+    // ── DOM refs ────────────────────────────────────────────────────────────
+    const setupScreen              = document.getElementById('setup-screen');
+    const gameScreen               = document.getElementById('game-screen');
+    const playerNameInput          = document.getElementById('player-name');
+    const addPlayerBtn             = document.getElementById('add-player-btn');
+    const playerList               = document.getElementById('player-list');
+    const playerCountEl            = document.getElementById('player-count');
+    const playersOnPitchInput      = document.getElementById('players-on-pitch');
+    const substitutionIntervalInput= document.getElementById('substitution-interval');
+    const playersToRotateInput     = document.getElementById('players-to-rotate');
+    const startGameBtn             = document.getElementById('start-game-btn');
+    const pauseBtn                 = document.getElementById('pause-btn');
+    const swapGoalieBtn            = document.getElementById('swap-goalie-btn');
+    const manualSubBtn             = document.getElementById('manual-sub-btn');
+    const skipBtn                  = document.getElementById('skip-btn');
+    const demoMinuteBtn            = document.getElementById('demo-minute-btn');
+    const resetBtn                 = document.getElementById('reset-btn');
+    const currentLineupEl          = document.getElementById('current-lineup');
+    const benchEl                  = document.getElementById('bench');
+    const lineupCountEl            = document.getElementById('lineup-count');
+    const benchCountEl             = document.getElementById('bench-count');
+    const countdownEl              = document.getElementById('countdown');
+    const imminentMsgEl            = document.getElementById('imminent-msg');
+    const gameTimeEl               = document.getElementById('game-time');
+    const rotationCountEl          = document.getElementById('rotation-count');
+    const playerStatsMobileEl      = document.getElementById('player-stats-mobile');
+    const swapHintEl               = document.getElementById('swap-hint');
+    const swapGoalieHintEl         = document.getElementById('swap-goalie-hint');
 
-    // Handle adding a new player
+    // ── Persistence ─────────────────────────────────────────────────────────
+    function saveState() {
+      localStorage.setItem('soccerSub', JSON.stringify({
+        players, goaliePlayer, playersOnPitch, substitutionInterval, playersToRotate,
+        currentTime, setupComplete, countdown, isBlinking, currentLineup, bench, playerStats
+        // isRunning intentionally omitted: always restore as paused
+      }));
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem('soccerSub');
+      if (!raw) return false;
+      try {
+        const s = JSON.parse(raw);
+        players              = s.players;
+        goaliePlayer         = s.goaliePlayer;
+        playersOnPitch       = s.playersOnPitch;
+        substitutionInterval = s.substitutionInterval;
+        playersToRotate      = s.playersToRotate;
+        currentTime          = s.currentTime;
+        setupComplete        = s.setupComplete;
+        countdown            = s.countdown;
+        isBlinking           = s.isBlinking;
+        currentLineup        = s.currentLineup;
+        bench                = s.bench;
+        playerStats          = s.playerStats;
+        isRunning            = false;
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function clearSavedState() {
+      localStorage.removeItem('soccerSub');
+    }
+
+    // ── Setup ───────────────────────────────────────────────────────────────
     function handleAddPlayer() {
       const name = playerNameInput.value.trim();
-      if (name === '') return;
-      
+      if (!name) return;
       players.push(name);
+      if (players.length === 1) goaliePlayer = name;
       playerNameInput.value = '';
       playerNameInput.focus();
-      
+      saveState();
       renderPlayerList();
     }
 
-    // Handle removing a player
     function handleRemovePlayer(index) {
+      const removed = players[index];
       players.splice(index, 1);
+      if (removed === goaliePlayer) {
+        goaliePlayer = players.length > 0 ? players[0] : null;
+      }
+      saveState();
       renderPlayerList();
     }
 
-    // Render the player list in setup screen
+    function setGoalie(name) {
+      goaliePlayer = name;
+      saveState();
+      renderPlayerList();
+    }
+
     function renderPlayerList() {
       playerList.innerHTML = '';
       playerCountEl.textContent = players.length;
-      
+
       players.forEach((player, index) => {
-        const playerItem = document.createElement('div');
-        playerItem.className = 'player-item';
-        playerItem.innerHTML = `
-          <span>${player}</span>
-          <button class="remove-btn">&times;</button>
+        const isGoalie = player === goaliePlayer;
+        const item = document.createElement('div');
+        item.className = 'player-item' + (isGoalie ? ' goalie-border' : '');
+        item.innerHTML = `
+          <span>
+            ${player}
+            ${isGoalie ? '<span class="gk-badge">GK</span>' : ''}
+          </span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${!isGoalie
+              ? `<button class="set-gk-btn">Set GK</button>`
+              : ''}
+            <button class="remove-btn">&times;</button>
+          </div>
         `;
-        
-        playerItem.querySelector('.remove-btn').addEventListener('click', () => handleRemovePlayer(index));
-        playerList.appendChild(playerItem);
+        if (!isGoalie) {
+          item.querySelector('.set-gk-btn').addEventListener('click', () => setGoalie(player));
+        }
+        item.querySelector('.remove-btn').addEventListener('click', () => handleRemovePlayer(index));
+        playerList.appendChild(item);
       });
-      
-      // Update start button state
+
       startGameBtn.disabled = players.length < playersOnPitch;
       startGameBtn.className = players.length < playersOnPitch ? 'success-btn disabled' : 'success-btn';
     }
 
-    // Start the game
+    // ── Game start ──────────────────────────────────────────────────────────
     function startGame() {
-      playersOnPitch = parseInt(playersOnPitchInput.value) || 7;
+      playersOnPitch       = parseInt(playersOnPitchInput.value) || 7;
       substitutionInterval = parseInt(substitutionIntervalInput.value) || 5;
-      playersToRotate = parseInt(playersToRotateInput.value) || 2;
-      
+      playersToRotate      = parseInt(playersToRotateInput.value) || 2;
+
       if (players.length < playersOnPitch) {
-        alert(`You need at least ${playersOnPitch} players to start the game!`);
+        alert(`You need at least ${playersOnPitch} players to start!`);
         return;
       }
-      
-      // Initialize player stats
+      if (!goaliePlayer) {
+        alert('Please designate a goalkeeper first.');
+        return;
+      }
+
       playerStats = {};
-      players.forEach(player => {
-        playerStats[player] = {
-          timeOnPitch: 0,
-          timeOnBench: 0,
-          substitutions: 0
-        };
+      players.forEach(p => {
+        playerStats[p] = { timeOnPitch: 0, timeOnBench: 0, substitutions: 0 };
       });
-      
-      // Set up initial lineup and bench
-      currentLineup = players.slice(0, playersOnPitch);
-      bench = players.slice(playersOnPitch);
-      
-      // Update UI
+
+      // Goalie is always at the end of the lineup array (pinned)
+      const fieldPlayers = players.filter(p => p !== goaliePlayer);
+      currentLineup = [...fieldPlayers.slice(0, playersOnPitch - 1), goaliePlayer];
+      bench         = fieldPlayers.slice(playersOnPitch - 1);
+
       setupScreen.style.display = 'none';
-      gameScreen.style.display = 'block';
+      gameScreen.style.display  = 'block';
       rotationCountEl.textContent = playersToRotate;
-      
-      // Start the timer
+
       setupComplete = true;
-      isRunning = true;
-      countdown = substitutionInterval * 60;
+      isRunning     = true;
+      countdown     = substitutionInterval * 60;
       startTimer();
-      
-      // Render initial state
+      saveState();
       renderGame();
     }
 
-    // Handle substitutions
+    // ── Substitution ────────────────────────────────────────────────────────
     function makeSubstitution() {
       if (bench.length === 0) return;
-      
-      // Determine how many players to substitute
-      const numToSubstitute = Math.min(bench.length, playersToRotate, currentLineup.length);
-      
-      // Players coming off the pitch (the ones who've been on longest)
-      const leavingPlayers = currentLineup.slice(0, numToSubstitute);
-      
-      // Remaining players on the pitch
-      const remainingPlayers = currentLineup.slice(numToSubstitute);
-      
-      // Players coming on from the bench (the ones who've been on bench longest)
-      const enteringPlayers = bench.slice(0, numToSubstitute);
-      
-      // Remaining players on the bench
-      const remainingBench = bench.slice(numToSubstitute);
-      
-      // Update player stats
-      leavingPlayers.forEach(player => {
-        playerStats[player].substitutions += 1;
-      });
-      
-      enteringPlayers.forEach(player => {
-        playerStats[player].substitutions += 1;
-      });
-      
-      // Update lineup and bench
-      currentLineup = [...remainingPlayers, ...enteringPlayers];
-      bench = [...remainingBench, ...leavingPlayers];
-      
-      // Reset countdown, blinking, and any pending tap selection
-      countdown = substitutionInterval * 60;
-      isBlinking = false;
+
+      // Work only with non-goalie pitch players
+      const fieldOnPitch = currentLineup.filter(p => p !== goaliePlayer);
+      const numToSub     = Math.min(bench.length, playersToRotate, fieldOnPitch.length);
+      if (numToSub === 0) return;
+
+      const leaving       = fieldOnPitch.slice(0, numToSub);
+      const remaining     = fieldOnPitch.slice(numToSub);
+      const entering      = bench.slice(0, numToSub);
+      const remainingBench = bench.slice(numToSub);
+
+      leaving.forEach(p  => playerStats[p].substitutions++);
+      entering.forEach(p => playerStats[p].substitutions++);
+
+      // Goalie stays pinned at the end
+      currentLineup = [...remaining, ...entering, goaliePlayer];
+      bench         = [...remainingBench, ...leaving];
+
+      countdown           = substitutionInterval * 60;
+      isBlinking          = false;
       selectedPitchPlayer = null;
-      
-      // Update UI
+
+      saveState();
       renderGame();
     }
 
-    // Timer function for countdown and stats
+    // ── Timer ───────────────────────────────────────────────────────────────
     function startTimer() {
       if (timer) clearInterval(timer);
-      
       timer = setInterval(() => {
         if (!isRunning) return;
-        
-        // Update countdown
+
         countdown--;
-        
-        // Set blinking state when 30 seconds or less remain
-        if (countdown <= 30) {
-          isBlinking = true;
-        } else {
-          isBlinking = false;
-        }
-        
-        // When countdown reaches zero
+
+        isBlinking = countdown <= 30;
+
         if (countdown <= 0) {
-          // Make substitution
-          if (bench.length > 0) {
-            makeSubstitution();
-          }
+          if (bench.length > 0) makeSubstitution();
+          else countdown = substitutionInterval * 60;
           isBlinking = false;
-          countdown = substitutionInterval * 60;
+          return; // makeSubstitution already calls renderGame
         }
-        
-        // Update game time (1/60 of a minute each second)
-        currentTime += (1/60);
-        
-        // Update player stats for time on pitch/bench
-        currentLineup.forEach(player => {
-          playerStats[player].timeOnPitch += 1; // Add one second
-        });
-        
-        bench.forEach(player => {
-          playerStats[player].timeOnBench += 1; // Add one second
-        });
-        
-        // Update UI
+
+        currentTime += 1 / 60;
+
+        currentLineup.forEach(p => playerStats[p].timeOnPitch++);
+        bench.forEach(p         => playerStats[p].timeOnBench++);
+
+        // Save every 60 ticks (once per minute) to avoid hammering localStorage
+        if (Math.round(currentTime * 60) % 60 === 0) saveState();
+
         renderGame();
       }, 1000);
     }
 
-    // Demo minute button handler
+    // ── +1 Minute demo ──────────────────────────────────────────────────────
     function handleDemoMinute() {
-      // Reduce countdown by 60 seconds
       countdown -= 60;
-      if (countdown <= 0) {
-        if (bench.length > 0) {
-          makeSubstitution();
-        } else {
-          countdown = substitutionInterval * 60;
-        }
-      }
-      
-      // Increase game time by 1 minute
       currentTime += 1;
-      
-      // Update player stats
-      currentLineup.forEach(player => {
-        playerStats[player].timeOnPitch += 60;
-      });
-      
-      bench.forEach(player => {
-        playerStats[player].timeOnBench += 60;
-      });
-      
-      // Update UI
-      renderGame();
+      currentLineup.forEach(p => playerStats[p].timeOnPitch += 60);
+      bench.forEach(p         => playerStats[p].timeOnBench += 60);
+
+      if (countdown <= 0) {
+        if (bench.length > 0) makeSubstitution();
+        else countdown = substitutionInterval * 60;
+      } else {
+        saveState();
+        renderGame();
+      }
     }
 
-    // Reset the game
-    function resetGame() {
-      if (!confirm('Are you sure you want to reset the game?')) return;
-      
-      currentTime = 0;
-      isRunning = false;
-      setupComplete = false;
-      countdown = 0;
-      isBlinking = false;
-      currentLineup = [];
-      bench = [];
-      playerStats = {};
-      selectedPitchPlayer = null;
-      
-      if (timer) clearInterval(timer);
-      
-      // Show setup screen again
-      setupScreen.style.display = 'block';
-      gameScreen.style.display = 'none';
-    }
-
-    // Format time as MM:SS
-    function formatTime(timeInMinutes) {
-      const minutes = Math.floor(timeInMinutes);
-      return `${minutes} min`;
-    }
-
-    // Format countdown as MM:SS
-    function formatCountdown(seconds) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-
-    // Format player time stats as MM:SS
-    function formatPlayerTime(seconds) {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-
-    // Ad-hoc swap of a specific pitch player with a specific bench player
+    // ── Manual quick-swap (non-goalie) ──────────────────────────────────────
     function swapPlayers(pitchPlayer, benchPlayer) {
-      const pitchIndex = currentLineup.indexOf(pitchPlayer);
-      const benchIndex = bench.indexOf(benchPlayer);
-      if (pitchIndex === -1 || benchIndex === -1) return;
-      currentLineup[pitchIndex] = benchPlayer;
-      bench.splice(benchIndex, 1);
+      const pitchIdx = currentLineup.indexOf(pitchPlayer);
+      const benchIdx = bench.indexOf(benchPlayer);
+      if (pitchIdx === -1 || benchIdx === -1) return;
+
+      currentLineup[pitchIdx] = benchPlayer;
+      bench.splice(benchIdx, 1);
       bench.push(pitchPlayer);
-      playerStats[pitchPlayer].substitutions += 1;
-      playerStats[benchPlayer].substitutions += 1;
+
+      playerStats[pitchPlayer].substitutions++;
+      playerStats[benchPlayer].substitutions++;
       selectedPitchPlayer = null;
+      saveState();
       renderGame();
     }
 
-    // Render game state
-    function renderGame() {
-      // Update counts
-      lineupCountEl.textContent = currentLineup.length;
-      benchCountEl.textContent = bench.length;
-      
-      // Update swap hint
-      swapHintEl.style.display = selectedPitchPlayer ? 'block' : 'none';
+    // ── Swap goalkeeper ─────────────────────────────────────────────────────
+    function handleSwapGoalieTap(player) {
+      if (player === goaliePlayer) {
+        // Tapping current GK cancels the mode
+        swapGoalieMode = false;
+        renderGame();
+        return;
+      }
 
-      // Update lineup
+      const isOnPitch = currentLineup.includes(player);
+
+      if (isOnPitch) {
+        // Field player on pitch becomes new GK — no movement, just role change
+        goaliePlayer = player;
+      } else {
+        // Bench player becomes new GK: swap with current goalie
+        const pitchIdx = currentLineup.indexOf(goaliePlayer);
+        const benchIdx = bench.indexOf(player);
+        bench.splice(benchIdx, 1);
+        bench.push(goaliePlayer); // old GK joins bench rotation
+        currentLineup[pitchIdx] = player;
+        playerStats[goaliePlayer].substitutions++;
+        playerStats[player].substitutions++;
+        goaliePlayer = player;
+      }
+
+      swapGoalieMode = false;
+      saveState();
+      renderGame();
+    }
+
+    // ── Reset ───────────────────────────────────────────────────────────────
+    function resetGame() {
+      if (!confirm('Reset the game? All progress will be lost.')) return;
+      if (timer) clearInterval(timer);
+      clearSavedState();
+
+      players = []; goaliePlayer = null;
+      currentTime = 0; isRunning = false; setupComplete = false;
+      countdown = 0; isBlinking = false;
+      currentLineup = []; bench = []; playerStats = {};
+      selectedPitchPlayer = null; swapGoalieMode = false;
+
+      playersOnPitchInput.value       = 7;
+      substitutionIntervalInput.value = 5;
+      playersToRotateInput.value      = 2;
+
+      setupScreen.style.display = 'block';
+      gameScreen.style.display  = 'none';
+      renderPlayerList();
+    }
+
+    // ── Formatting ──────────────────────────────────────────────────────────
+    function formatTime(minutes) {
+      return `${Math.floor(minutes)} min`;
+    }
+
+    function formatCountdown(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function formatPlayerTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    // ── Render ──────────────────────────────────────────────────────────────
+    function renderGame() {
+      lineupCountEl.textContent = currentLineup.length;
+      benchCountEl.textContent  = bench.length;
+
+      // Hints
+      swapHintEl.style.display      = (!swapGoalieMode && selectedPitchPlayer) ? 'block' : 'none';
+      swapGoalieHintEl.style.display = swapGoalieMode ? 'block' : 'none';
+      swapGoalieBtn.className        = swapGoalieMode ? 'amber-btn' : 'amber-btn';
+      swapGoalieBtn.style.outline    = swapGoalieMode ? '3px solid #92400e' : 'none';
+
+      // ── Lineup ──
       currentLineupEl.innerHTML = '';
+      const fieldOnPitch = currentLineup.filter(p => p !== goaliePlayer);
+
       currentLineup.forEach((player, index) => {
-        const playerEl = document.createElement('div');
-        playerEl.className = 'player-item';
-        if (player === selectedPitchPlayer) {
-          playerEl.classList.add('selected');
-        } else if (index < playersToRotate) {
-          playerEl.classList.add('leaving');
-          if (isBlinking) {
-            playerEl.classList.add('blinking');
-          }
+        const isGoalie    = player === goaliePlayer;
+        const fieldRank   = fieldOnPitch.indexOf(player); // -1 for goalie
+        const isLeaving   = !isGoalie && fieldRank >= 0 && fieldRank < playersToRotate;
+        const isSelected  = player === selectedPitchPlayer;
+
+        const el = document.createElement('div');
+        el.className = 'player-item';
+
+        if (swapGoalieMode) {
+          el.classList.add(isGoalie ? 'selected' : 'goalie-selectable');
+        } else if (isSelected) {
+          el.classList.add('selected');
+        } else if (isLeaving) {
+          el.classList.add('leaving');
+          if (isBlinking) el.classList.add('blinking');
         }
-        const arrow = index < playersToRotate ? ' ↑' : '';
-        const chevron = player === selectedPitchPlayer ? '✕' : '›';
-        playerEl.innerHTML = `<span>${player}${arrow}</span><span class="tap-hint">${chevron}</span>`;
-        const handlePitchTap = () => {
-          selectedPitchPlayer = (selectedPitchPlayer === player) ? null : player;
-          renderGame();
+        if (isGoalie) el.classList.add('goalie-border');
+
+        const arrow   = isLeaving ? ' ↑' : '';
+        const gkBadge = isGoalie ? '<span class="gk-badge">GK</span>' : '';
+        const chevron = isSelected ? '✕' : (isGoalie && swapGoalieMode ? '✕' : '›');
+
+        el.innerHTML = `<span>${player}${arrow}${gkBadge}</span><span class="tap-hint">${chevron}</span>`;
+
+        const onTap = () => {
+          if (swapGoalieMode) {
+            handleSwapGoalieTap(player);
+          } else if (!isGoalie) {
+            selectedPitchPlayer = (selectedPitchPlayer === player) ? null : player;
+            renderGame();
+          }
         };
-        playerEl.addEventListener('touchend', (e) => { e.preventDefault(); handlePitchTap(); });
-        playerEl.addEventListener('click', handlePitchTap);
-        currentLineupEl.appendChild(playerEl);
+        el.addEventListener('touchend', e => { e.preventDefault(); onTap(); });
+        el.addEventListener('click', onTap);
+        currentLineupEl.appendChild(el);
       });
-      
-      // Update bench
+
+      // ── Bench ──
       benchEl.innerHTML = '';
       bench.forEach((player, index) => {
-        const playerEl = document.createElement('div');
-        playerEl.className = 'player-item';
-        if (index < playersToRotate) {
-          playerEl.classList.add('entering');
+        const isEntering = index < playersToRotate;
+        const el = document.createElement('div');
+        el.className = 'player-item';
+
+        if (swapGoalieMode) {
+          el.classList.add('goalie-selectable');
+        } else if (selectedPitchPlayer) {
+          el.classList.add('bench-selectable');
+        } else if (isEntering) {
+          el.classList.add('entering');
         }
-        playerEl.textContent = player + (index < playersToRotate ? ' ↓' : '');
-        if (selectedPitchPlayer) {
-          playerEl.classList.add('bench-selectable');
-          const handleBenchTap = () => { swapPlayers(selectedPitchPlayer, player); };
-          playerEl.addEventListener('touchend', (e) => { e.preventDefault(); handleBenchTap(); });
-          playerEl.addEventListener('click', handleBenchTap);
-        }
-        benchEl.appendChild(playerEl);
+
+        el.textContent = player + (isEntering && !swapGoalieMode ? ' ↓' : '');
+
+        const onTap = () => {
+          if (swapGoalieMode) {
+            handleSwapGoalieTap(player);
+          } else if (selectedPitchPlayer) {
+            swapPlayers(selectedPitchPlayer, player);
+          }
+        };
+        el.addEventListener('touchend', e => { e.preventDefault(); onTap(); });
+        el.addEventListener('click', onTap);
+        benchEl.appendChild(el);
       });
-      
-      // Update countdown
+
+      // ── Countdown ──
       countdownEl.textContent = formatCountdown(countdown);
       if (isBlinking) {
         countdownEl.classList.add('warning');
@@ -823,23 +819,24 @@
         countdownEl.classList.remove('warning');
         imminentMsgEl.style.display = 'none';
       }
-      
-      // Update game time
+
       gameTimeEl.textContent = formatTime(currentTime);
-      
-      // Update pause button text
-      pauseBtn.textContent = isRunning ? 'Pause' : 'Resume';
-      
-      // Update player stats (mobile-friendly version)
+      pauseBtn.textContent   = isRunning ? 'Pause' : 'Resume';
+
+      // ── Player stats ──
       playerStatsMobileEl.innerHTML = '';
       players.forEach(player => {
         const isOnPitch = currentLineup.includes(player);
-        const statCard = document.createElement('div');
-        statCard.className = 'player-stat-card';
-        
-        statCard.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="player-name">${player}</div>
+        const isGoalie  = player === goaliePlayer;
+        const card      = document.createElement('div');
+        card.className  = 'player-stat-card';
+        if (isGoalie) card.style.borderLeft = '3px solid #f59e0b';
+
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="player-name">
+              ${player}${isGoalie ? '<span class="gk-badge">GK</span>' : ''}
+            </div>
             <div class="status-badge ${isOnPitch ? 'on-pitch' : 'on-bench'}">${isOnPitch ? 'On Pitch' : 'On Bench'}</div>
           </div>
           <div class="player-stat-grid">
@@ -857,70 +854,94 @@
             </div>
           </div>
         `;
-        
-        playerStatsMobileEl.appendChild(statCard);
+        playerStatsMobileEl.appendChild(card);
       });
-      
-      // Update button states
-      manualSubBtn.disabled = bench.length === 0;
-      skipBtn.disabled = bench.length === 0;
-      manualSubBtn.className = bench.length === 0 ? 'primary-btn disabled' : 'primary-btn';
-      skipBtn.className = bench.length === 0 ? 'success-btn disabled' : 'success-btn';
+
+      // ── Button states ──
+      const noSub = bench.length === 0;
+      manualSubBtn.disabled  = noSub;
+      skipBtn.disabled       = noSub;
+      manualSubBtn.className = noSub ? 'primary-btn disabled' : 'primary-btn';
+      skipBtn.className      = noSub ? 'success-btn disabled' : 'success-btn';
     }
 
-    // Event listeners
+    // ── Event listeners ─────────────────────────────────────────────────────
     addPlayerBtn.addEventListener('click', handleAddPlayer);
-    playerNameInput.addEventListener('keypress', (e) => {
+    playerNameInput.addEventListener('keypress', e => {
       if (e.key === 'Enter') handleAddPlayer();
     });
+
     startGameBtn.addEventListener('click', startGame);
+
     pauseBtn.addEventListener('click', () => {
       isRunning = !isRunning;
       if (isRunning) startTimer();
+      saveState();
       renderGame();
     });
+
+    swapGoalieBtn.addEventListener('click', () => {
+      swapGoalieMode      = !swapGoalieMode;
+      selectedPitchPlayer = null;
+      renderGame();
+    });
+
     manualSubBtn.addEventListener('click', makeSubstitution);
-    skipBtn.addEventListener('click', () => {
-      countdown = 0;
-      if (!isRunning) {
-        makeSubstitution();
-      }
-      renderGame();
-    });
+
+    skipBtn.addEventListener('click', makeSubstitution);
+
     demoMinuteBtn.addEventListener('click', handleDemoMinute);
+
     resetBtn.addEventListener('click', resetGame);
 
-    // Input change handlers
     playersOnPitchInput.addEventListener('change', () => {
       playersOnPitch = parseInt(playersOnPitchInput.value) || 7;
-      // Make sure players to rotate doesn't exceed players on pitch
-      if (playersToRotate > playersOnPitch) {
-        playersToRotate = playersOnPitch;
+      if (playersToRotate >= playersOnPitch) {
+        playersToRotate = playersOnPitch - 1;
         playersToRotateInput.value = playersToRotate;
       }
       renderPlayerList();
     });
 
     playersToRotateInput.addEventListener('change', () => {
-      const value = parseInt(playersToRotateInput.value) || 1;
-      playersToRotate = Math.min(value, playersOnPitch);
+      const v = parseInt(playersToRotateInput.value) || 1;
+      playersToRotate = Math.min(v, playersOnPitch - 1); // never rotate the GK slot
       playersToRotateInput.value = playersToRotate;
     });
 
-    // Add touch feedback for mobile
-    document.querySelectorAll('button').forEach(button => {
-      button.addEventListener('touchstart', function() {
-        this.style.opacity = '0.7';
-      });
-      
-      button.addEventListener('touchend', function() {
-        this.style.opacity = '1';
-      });
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('touchstart', function () { this.style.opacity = '0.7'; });
+      btn.addEventListener('touchend',   function () { this.style.opacity = '1'; });
     });
 
-
-    // Initial render
-    renderPlayerList();
+    // ── Init ────────────────────────────────────────────────────────────────
+    window.addEventListener('load', () => {
+      const hasSaved = loadState();
+      if (hasSaved && setupComplete) {
+        if (confirm('Continue previous game?')) {
+          playersOnPitchInput.value       = playersOnPitch;
+          substitutionIntervalInput.value = substitutionInterval;
+          playersToRotateInput.value      = playersToRotate;
+          rotationCountEl.textContent     = playersToRotate;
+          setupScreen.style.display = 'none';
+          gameScreen.style.display  = 'block';
+          startTimer();
+          renderGame();
+        } else {
+          clearSavedState();
+          players = []; goaliePlayer = null;
+          renderPlayerList();
+        }
+      } else if (hasSaved && !setupComplete) {
+        // Restore player list and settings silently
+        playersOnPitchInput.value       = playersOnPitch;
+        substitutionIntervalInput.value = substitutionInterval;
+        playersToRotateInput.value      = playersToRotate;
+        renderPlayerList();
+      } else {
+        renderPlayerList();
+      }
+    });
   </script>
 </body>
 </html>
