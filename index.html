@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Soccer Substitution Manager</title>
   <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sub Manager">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e3a8a">
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -36,6 +42,14 @@
     .dark-btn    { background-color: #4b5563; color: white; }
     .amber-btn   { background-color: #b45309; color: white; }
     .indigo-btn  { background-color: #6366f1; color: white; }
+    .teal-btn    { background-color: #0d9488; color: white; }
+
+    .btn-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .btn-group button {
+      flex: 1 1 auto; width: auto; margin: 0; padding: 10px 8px;
+      font-size: 0.95rem; background-color: #e5e7eb; color: #374151;
+    }
+    .btn-group button.active { background-color: #3b82f6; color: white; }
     .disabled    { background-color: #9ca3af; cursor: not-allowed; opacity: 0.7; }
 
     .player-list { margin: 16px 0; }
@@ -238,8 +252,16 @@
       </div>
 
       <div class="card">
+        <h2>Format &amp; Formation</h2>
+        <label>Format</label>
+        <div id="format-buttons" class="btn-group"></div>
+        <label>Formation</label>
+        <div id="formation-buttons" class="btn-group"></div>
+      </div>
+
+      <div class="card">
         <h2>Team members</h2>
-        <p style="margin-top:0;color:#6b7280;font-size:0.9rem;">First player added becomes goalkeeper. Tap "Set GK" to reassign.</p>
+        <p style="margin-top:0;color:#6b7280;font-size:0.9rem;">Add every player who might play. You'll assign positions (including goalkeeper) below.</p>
         <div class="input-group">
           <input type="text" id="player-name" placeholder="Enter player name">
           <button class="primary-btn" id="add-player-btn">Add</button>
@@ -249,11 +271,15 @@
       </div>
 
       <div class="card">
+        <h2>Assign Positions</h2>
+        <p style="margin-top:0;color:#6b7280;font-size:0.9rem;">Pick a player for every slot. Whoever's left becomes the bench.</p>
+        <div id="slot-assignment-list" class="player-list"></div>
+        <h3 style="margin-bottom:6px;">Bench</h3>
+        <p id="bench-preview" style="margin:0;color:#374151;">—</p>
+      </div>
+
+      <div class="card">
         <h2>Game Settings</h2>
-        <div>
-          <label for="players-on-pitch">Players on pitch (including GK)?</label>
-          <input type="number" id="players-on-pitch" min="2" value="7">
-        </div>
         <div>
           <label for="substitution-interval">Substitution interval (minutes)?</label>
           <input type="number" id="substitution-interval" min="1" value="5">
@@ -264,7 +290,7 @@
         </div>
       </div>
 
-      <button id="start-game-btn" class="success-btn">Start Game</button>
+      <button id="start-game-btn" class="success-btn disabled">Start Game</button>
     </div>
 
     <!-- Game screen -->
@@ -288,6 +314,9 @@
         <p id="swap-hint" class="hint-bar hint-swap-pitch" style="display:none;">Tap a bench player to swap — or tap the same player again to cancel</p>
         <div id="swap-goalie-hint" class="hint-bar hint-swap-goalie" style="display:none;">
           Tap any player to become the new goalkeeper. Tap current GK to cancel.
+        </div>
+        <div id="swap-position-hint" class="hint-bar hint-swap-goalie" style="display:none;">
+          Tap a second on-pitch player to swap positions.
         </div>
         <p id="add-extra-hint" class="hint-bar hint-swap-pitch" style="display:none;">Tap a bench player to bring them on as an extra player</p>
         <p id="remove-extra-hint" class="hint-bar hint-swap-pitch" style="display:none;">Tap an on-pitch player to send them back to the bench</p>
@@ -323,6 +352,7 @@
         <button id="remove-extra-btn" class="dark-btn">Remove Extra Player</button>
       </div>
 
+      <button id="swap-pos-btn" class="teal-btn" style="margin-top:12px;">Swap Positions</button>
       <button id="break-btn" class="indigo-btn" style="margin-top:12px;">Match Reset (Break)</button>
       <button id="reset-btn" class="danger-btn">Full Reset</button>
 
@@ -334,6 +364,30 @@
   </div>
 
   <script>
+    // ── Formations ───────────────────────────────────────────────────────────
+    const FORMATIONS = {
+      5: [
+        { key: '2-2',   label: '2-2',              slots: ['LB','RB','LF','RF'] },
+        { key: '1-2-1', label: '1-2-1',            slots: ['DEF','LM','RM','FWD'] },
+        { key: '2-1-1', label: '2-1-1',            slots: ['LB','RB','CM','FWD'] },
+      ],
+      7: [
+        { key: '2-3-1', label: '2-3-1', slots: ['LB','RB','LM','CM','RM','FWD'] },
+        { key: '3-2-1', label: '3-2-1', slots: ['LB','CB','RB','LM','RM','FWD'] },
+        { key: '3-1-2', label: '3-1-2', slots: ['LB','CB','RB','CM','LF','RF'] },
+      ],
+      9: [
+        { key: '3-3-2', label: '3-3-2', slots: ['LB','CB','RB','LM','CM','RM','LST','RST'] },
+        { key: '3-2-3', label: '3-2-3', slots: ['LB','CB','RB','LCM','RCM','LW','ST','RW'] },
+        { key: '4-3-1', label: '4-3-1', slots: ['LB','LCB','RCB','RB','LM','CM','RM','FWD'] },
+      ],
+      11: [
+        { key: '4-3-3', label: '4-3-3', slots: ['LB','LCB','RCB','RB','LCM','CM','RCM','LW','ST','RW'] },
+        { key: '4-4-2', label: '4-4-2', slots: ['LB','LCB','RCB','RB','LM','LCM','RCM','RM','LST','RST'] },
+        { key: '3-5-2', label: '3-5-2', slots: ['LCB','CB','RCB','LM','LCM','CM','RCM','RM','LST','RST'] },
+      ],
+    };
+
     // ── State ────────────────────────────────────────────────────────────────
     let players              = [];
     let goaliePlayer         = null;
@@ -354,8 +408,15 @@
     let swapGoalieMode       = false;
     let subModalOpen         = false;
     let subModalSource       = 'timer'; // 'timer' | 'manual'
+    let subPositionOverride  = {}; // staged, while sub modal is open: enteringPlayer -> position label
     let addExtraMode         = false;
     let removeExtraMode      = false;
+    let positions            = {};  // { "Jonathan": "LB", ... } — every on-pitch player has an entry
+    let activeFormationSlots = [];  // e.g. ["GK","LB","CB","RB","LM","CM","RM","ST"]
+    let selectedFormatSize   = 7;   // staged during setup, before Start Game
+    let selectedFormationKey = null;
+    let swapPositionMode       = false;
+    let selectedPositionPlayer = null;
     // pendingAction: staged change awaiting confirm/cancel via the swap-confirm-bar.
     //   { type: 'quickSwap',   pitch, bench }
     //   { type: 'gkSwap',      player }
@@ -365,6 +426,7 @@
     let breakModalOpen       = false;
     let breakOnPitch         = new Set(); // staged reshuffle: player names currently marked on-pitch
     let breakGoalie          = null;      // staged reshuffle: player name marked GK
+    let breakPositions       = {};        // staged reshuffle: player name -> slot label, for on-pitch field players
     let wasRunningBeforeBreak = false;
 
     // ── DOM refs ─────────────────────────────────────────────────────────────
@@ -374,12 +436,17 @@
     const addPlayerBtn              = document.getElementById('add-player-btn');
     const playerListEl              = document.getElementById('player-list');
     const playerCountEl             = document.getElementById('player-count');
-    const playersOnPitchInput       = document.getElementById('players-on-pitch');
+    const formatButtonsEl           = document.getElementById('format-buttons');
+    const formationButtonsEl        = document.getElementById('formation-buttons');
+    const slotAssignmentListEl      = document.getElementById('slot-assignment-list');
+    const benchPreviewEl            = document.getElementById('bench-preview');
     const substitutionIntervalInput = document.getElementById('substitution-interval');
     const playersToRotateInput      = document.getElementById('players-to-rotate');
     const startGameBtn              = document.getElementById('start-game-btn');
     const pauseBtn                  = document.getElementById('pause-btn');
     const swapGKBtn                 = document.getElementById('swap-gk-btn');
+    const swapPosBtn                = document.getElementById('swap-pos-btn');
+    const swapPositionHintEl        = document.getElementById('swap-position-hint');
     const subNowBtn                 = document.getElementById('sub-now-btn');
     const demoBtn                   = document.getElementById('demo-btn');
     const addExtraBtn               = document.getElementById('add-extra-btn');
@@ -418,7 +485,8 @@
     function saveState() {
       localStorage.setItem('soccerSub', JSON.stringify({
         players, goaliePlayer, playersOnPitch, basePlayersOnPitch, substitutionInterval, playersToRotate,
-        currentTime, setupComplete, countdown, isBlinking, currentLineup, bench, playerStats
+        currentTime, setupComplete, countdown, isBlinking, currentLineup, bench, playerStats,
+        positions, activeFormationSlots
       }));
     }
 
@@ -433,6 +501,8 @@
         basePlayersOnPitch   = s.basePlayersOnPitch ?? s.playersOnPitch;
         substitutionInterval = s.substitutionInterval;
         playersToRotate      = s.playersToRotate;
+        positions            = s.positions ?? {};
+        activeFormationSlots = s.activeFormationSlots ?? [];
         currentTime          = s.currentTime;
         setupComplete        = s.setupComplete;
         countdown            = s.countdown;
@@ -448,11 +518,12 @@
     function clearSavedState() { localStorage.removeItem('soccerSub'); }
 
     // ── Setup ────────────────────────────────────────────────────────────────
+    let setupAssignments = {}; // slotLabel -> playerName, staged during setup ('GK' + formation.slots)
+
     function handleAddPlayer() {
       const name = playerNameInput.value.trim();
       if (!name) return;
       players.push(name);
-      if (players.length === 1) goaliePlayer = name;
       playerNameInput.value = '';
       playerNameInput.focus();
       saveState();
@@ -460,15 +531,7 @@
     }
 
     function handleRemovePlayer(index) {
-      const removed = players[index];
       players.splice(index, 1);
-      if (removed === goaliePlayer) goaliePlayer = players.length > 0 ? players[0] : null;
-      saveState();
-      renderPlayerList();
-    }
-
-    function setGoalie(name) {
-      goaliePlayer = name;
       saveState();
       renderPlayerList();
     }
@@ -478,46 +541,145 @@
       playerCountEl.textContent = players.length;
 
       players.forEach((player, index) => {
-        const isGK = player === goaliePlayer;
         const item = document.createElement('div');
-        item.className = 'player-item' + (isGK ? ' goalie-border' : '');
+        item.className = 'player-item';
         item.innerHTML = `
-          <span>${player}${isGK ? '<span class="gk-badge">GK</span>' : ''}</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            ${!isGK ? `<button class="set-gk-btn">Set GK</button>` : ''}
-            <button class="remove-btn">&times;</button>
-          </div>`;
-        if (!isGK) item.querySelector('.set-gk-btn').addEventListener('click', () => setGoalie(player));
+          <span>${player}</span>
+          <button class="remove-btn">&times;</button>`;
         item.querySelector('.remove-btn').addEventListener('click', () => handleRemovePlayer(index));
         playerListEl.appendChild(item);
       });
 
-      startGameBtn.disabled = players.length < playersOnPitch;
-      startGameBtn.className = players.length < playersOnPitch ? 'success-btn disabled' : 'success-btn';
+      renderSlotAssignment();
+    }
+
+    // ── Format / Formation / Slot assignment ────────────────────────────────
+    function currentFormationList() { return FORMATIONS[selectedFormatSize] || []; }
+    function currentFormation() {
+      return currentFormationList().find(f => f.key === selectedFormationKey) || null;
+    }
+
+    function renderFormatButtons() {
+      formatButtonsEl.innerHTML = '';
+      [5, 7, 9, 11].forEach(size => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = `${size}v${size}`;
+        btn.className = 'format-btn' + (size === selectedFormatSize ? ' active' : '');
+        btn.addEventListener('click', () => {
+          if (selectedFormatSize === size) return;
+          selectedFormatSize   = size;
+          selectedFormationKey = null;
+          setupAssignments     = {};
+          renderFormatButtons();
+          renderFormationButtons();
+          renderSlotAssignment();
+        });
+        formatButtonsEl.appendChild(btn);
+      });
+    }
+
+    function renderFormationButtons() {
+      const list = currentFormationList();
+      if (!list.find(f => f.key === selectedFormationKey)) {
+        selectedFormationKey = list.length ? list[0].key : null;
+      }
+      formationButtonsEl.innerHTML = '';
+      list.forEach(f => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = f.label;
+        btn.className = 'formation-btn' + (f.key === selectedFormationKey ? ' active' : '');
+        btn.addEventListener('click', () => {
+          if (selectedFormationKey === f.key) return;
+          selectedFormationKey = f.key;
+          setupAssignments     = {};
+          renderFormationButtons();
+          renderSlotAssignment();
+        });
+        formationButtonsEl.appendChild(btn);
+      });
+    }
+
+    function renderSlotAssignment() {
+      const formation = currentFormation();
+      slotAssignmentListEl.innerHTML = '';
+
+      if (!formation) {
+        benchPreviewEl.textContent = '—';
+        startGameBtn.disabled = true;
+        startGameBtn.className = 'success-btn disabled';
+        return;
+      }
+
+      const slotLabels = ['GK', ...formation.slots];
+
+      // Drop stale assignments: player no longer on the roster, or a slot that
+      // doesn't exist under the (possibly just-changed) formation.
+      Object.keys(setupAssignments).forEach(label => {
+        if (!slotLabels.includes(label) || !players.includes(setupAssignments[label])) {
+          delete setupAssignments[label];
+        }
+      });
+
+      slotLabels.forEach(label => {
+        const assignedElsewhere = new Set(
+          Object.entries(setupAssignments).filter(([l]) => l !== label).map(([, n]) => n)
+        );
+        const options = players.filter(p => !assignedElsewhere.has(p));
+        const current = setupAssignments[label] || '';
+
+        const row = document.createElement('div');
+        row.className = 'player-item';
+        row.innerHTML = `
+          <label style="margin:0;flex-shrink:0;width:64px;">${label}</label>
+          <select style="margin:0;width:auto;flex:1;">
+            <option value="">— Select —</option>
+            ${options.map(p => `<option value="${p}" ${p === current ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>`;
+        row.querySelector('select').addEventListener('change', (e) => {
+          if (e.target.value) setupAssignments[label] = e.target.value;
+          else delete setupAssignments[label];
+          renderSlotAssignment();
+        });
+        slotAssignmentListEl.appendChild(row);
+      });
+
+      const benchNames = players.filter(p => !Object.values(setupAssignments).includes(p));
+      benchPreviewEl.textContent = players.length === 0 ? '—' : (benchNames.length ? benchNames.join(', ') : '(none)');
+
+      const allFilled = slotLabels.every(label => setupAssignments[label]);
+      startGameBtn.disabled  = !allFilled;
+      startGameBtn.className = allFilled ? 'success-btn' : 'success-btn disabled';
     }
 
     // ── Game start ───────────────────────────────────────────────────────────
     function startGame() {
-      playersOnPitch       = parseInt(playersOnPitchInput.value) || 7;
-      basePlayersOnPitch   = playersOnPitch;
-      substitutionInterval = parseInt(substitutionIntervalInput.value) || 5;
-      playersToRotate      = parseInt(playersToRotateInput.value) || 2;
+      const formation = currentFormation();
+      const slotLabels = formation ? ['GK', ...formation.slots] : [];
+      if (!formation || !slotLabels.every(label => setupAssignments[label])) {
+        alert('Please assign every position before starting.');
+        return;
+      }
 
-      if (players.length < playersOnPitch) {
-        alert(`You need at least ${playersOnPitch} players to start!`);
-        return;
-      }
-      if (!goaliePlayer) {
-        alert('Please designate a goalkeeper first.');
-        return;
-      }
+      substitutionInterval = parseInt(substitutionIntervalInput.value) || 5;
+      playersToRotate       = parseInt(playersToRotateInput.value) || 2;
+
+      goaliePlayer  = setupAssignments['GK'];
+      const fieldNames = formation.slots.map(label => setupAssignments[label]);
+      currentLineup = [...fieldNames, goaliePlayer];
+      bench         = players.filter(p => !currentLineup.includes(p));
+
+      positions = {};
+      slotLabels.forEach(label => { positions[setupAssignments[label]] = label; });
+      activeFormationSlots = [...formation.slots];
+
+      playersOnPitch     = currentLineup.length;
+      basePlayersOnPitch = currentLineup.length;
+      playersToRotate    = Math.min(playersToRotate, currentLineup.length - 1);
 
       playerStats = {};
       players.forEach(p => { playerStats[p] = { timeOnPitch: 0, timeOnBench: 0, substitutions: 0 }; });
-
-      const fieldPlayers = players.filter(p => p !== goaliePlayer);
-      currentLineup = [...fieldPlayers.slice(0, playersOnPitch - 1), goaliePlayer];
-      bench         = fieldPlayers.slice(playersOnPitch - 1);
 
       setupScreen.style.display = 'none';
       gameScreen.style.display  = 'block';
@@ -540,22 +702,79 @@
       return { leaving: fieldOnPitch.slice(0, n), entering: bench.slice(0, n) };
     }
 
+    // entering player -> position label they'll take on: staged override wins,
+    // otherwise the natural mapping (entering[i] inherits leaving[i]'s label).
+    function getSubAssignment(sub) {
+      const assignment = {};
+      sub.entering.forEach((e, i) => {
+        assignment[e] = subPositionOverride[e] || positions[sub.leaving[i]];
+      });
+      return assignment;
+    }
+
+    function renderSubModal(sub) {
+      subModalLeaving.innerHTML = sub.leaving.map(p =>
+        `<div class="sub-player-off">↑ ${p}${positions[p] ? ` (pos: ${positions[p]})` : ''}</div>`
+      ).join('');
+
+      const assignment    = getSubAssignment(sub);
+      const vacatedLabels = sub.leaving.map(p => positions[p]).filter(Boolean);
+      const reassignable  = sub.entering.length > 1 && vacatedLabels.length > 1;
+
+      subModalEntering.innerHTML = sub.entering.map(e => {
+        const label = assignment[e];
+        if (!reassignable) {
+          return `<div class="sub-player-on">↓ ${e}${label ? ` (pos: ${label})` : ''}</div>`;
+        }
+        return `
+          <div class="sub-player-on" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span>↓ ${e}</span>
+            <select class="sub-pos-select" data-player="${e}" style="margin:0;width:auto;">
+              ${vacatedLabels.map(l => `<option value="${l}" ${l === label ? 'selected' : ''}>${l}</option>`).join('')}
+            </select>
+          </div>`;
+      }).join('');
+
+      if (reassignable) {
+        subModalEntering.querySelectorAll('.sub-pos-select').forEach(sel => {
+          sel.addEventListener('change', (e) => {
+            const player   = e.target.dataset.player;
+            const newLabel = e.target.value;
+            const oldLabel = assignment[player];
+            // If another incoming player already holds the newly-picked label,
+            // give them this player's old label — a swap, not a dead end.
+            const conflict = Object.keys(assignment).find(n => n !== player && assignment[n] === newLabel);
+            subPositionOverride[player] = newLabel;
+            if (conflict) subPositionOverride[conflict] = oldLabel;
+            renderSubModal(sub);
+          });
+        });
+      }
+    }
+
     function executeSubstitution() {
       const sub = getUpcomingSub();
       if (!sub) return;
 
       const { leaving, entering } = sub;
+      const assignment = getSubAssignment(sub);
       const remainingField = currentLineup.filter(p => p !== goaliePlayer).slice(leaving.length);
       const remainingBench = bench.slice(entering.length);
 
       leaving.forEach(p  => playerStats[p].substitutions++);
       entering.forEach(p => playerStats[p].substitutions++);
 
+      leaving.forEach(p => delete positions[p]);
+      entering.forEach(e => {
+        if (assignment[e]) positions[e] = assignment[e]; else delete positions[e];
+      });
+
       currentLineup = [...remainingField, ...entering, goaliePlayer];
       bench         = [...remainingBench, ...leaving];
 
       countdown  = substitutionInterval * 60;
       isBlinking = false;
+      subPositionOverride = {};
       clearModes();
       saveState();
       renderGame();
@@ -565,13 +784,13 @@
       const sub = getUpcomingSub();
       if (!sub) return;
 
-      subModalOpen   = true;
-      subModalSource = source;
-      pendingAction  = null;
+      subModalOpen        = true;
+      subModalSource       = source;
+      pendingAction        = null;
+      subPositionOverride  = {};
 
-      subModalLeaving.innerHTML  = sub.leaving.map(p  => `<div class="sub-player-off">↑ ${p}</div>`).join('');
-      subModalEntering.innerHTML = sub.entering.map(p => `<div class="sub-player-on">↓ ${p}</div>`).join('');
-      subCancelBtn.textContent   = source === 'timer' ? 'Skip this sub' : 'Cancel';
+      renderSubModal(sub);
+      subCancelBtn.textContent = source === 'timer' ? 'Skip this sub' : 'Cancel';
 
       subModal.classList.add('open');
     }
@@ -587,6 +806,7 @@
         saveState();
         renderGame();
       }
+      subPositionOverride = {};
     }
 
     // ── Match reset (break / reshuffle) ─────────────────────────────────────
@@ -595,6 +815,8 @@
       isRunning       = false;
       breakOnPitch    = new Set(currentLineup);
       breakGoalie     = goaliePlayer;
+      breakPositions  = {};
+      currentLineup.forEach(p => { if (p !== goaliePlayer && positions[p]) breakPositions[p] = positions[p]; });
       breakModalOpen  = true;
       renderBreakModal();
       breakModal.classList.add('open');
@@ -606,6 +828,15 @@
       players.forEach(player => {
         const onPitch = breakOnPitch.has(player);
         const isGK    = player === breakGoalie;
+        const showPosSelect = onPitch && !isGK && activeFormationSlots.length > 0;
+
+        const takenLabels = new Set(
+          Object.entries(breakPositions)
+            .filter(([p]) => p !== player && breakOnPitch.has(p) && p !== breakGoalie)
+            .map(([, label]) => label)
+        );
+        const labelOptions = activeFormationSlots.filter(l => !takenLabels.has(l));
+        const current = breakPositions[player] || '';
 
         const item = document.createElement('div');
         item.className = 'player-item break-player-item' + (isGK ? ' goalie-border' : '');
@@ -615,10 +846,17 @@
           <span>${player}${isGK ? '<span class="gk-badge">GK</span>' : ''}<br>
             <span class="break-status" style="color:${onPitch ? '#065f46' : '#6b7280'};">${onPitch ? 'On Pitch' : 'On Bench'}</span>
           </span>
-          <button class="set-gk-btn" ${isGK ? 'disabled' : ''}>${isGK ? 'GK' : 'Set GK'}</button>`;
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${showPosSelect ? `
+              <select class="break-pos-select" style="margin:0;width:auto;">
+                <option value="">— Position —</option>
+                ${labelOptions.map(l => `<option value="${l}" ${l === current ? 'selected' : ''}>${l}</option>`).join('')}
+              </select>` : ''}
+            <button class="set-gk-btn" ${isGK ? 'disabled' : ''}>${isGK ? 'GK' : 'Set GK'}</button>
+          </div>`;
 
         item.addEventListener('click', (e) => {
-          if (e.target.closest('.set-gk-btn') || isGK) return;
+          if (e.target.closest('.set-gk-btn') || e.target.closest('select') || isGK) return;
           if (onPitch) breakOnPitch.delete(player); else breakOnPitch.add(player);
           renderBreakModal();
         });
@@ -626,8 +864,17 @@
           e.stopPropagation();
           breakGoalie = player;
           breakOnPitch.add(player);
+          delete breakPositions[player];
           renderBreakModal();
         });
+        const posSelect = item.querySelector('.break-pos-select');
+        if (posSelect) {
+          posSelect.addEventListener('change', (e) => {
+            if (e.target.value) breakPositions[player] = e.target.value;
+            else delete breakPositions[player];
+            renderBreakModal();
+          });
+        }
         breakPlayerListEl.appendChild(item);
       });
 
@@ -644,6 +891,9 @@
       currentLineup = [...fieldPlayers, breakGoalie];
       bench         = players.filter(p => !breakOnPitch.has(p));
       goaliePlayer  = breakGoalie;
+
+      positions = { [breakGoalie]: 'GK' };
+      fieldPlayers.forEach(p => { if (breakPositions[p]) positions[p] = breakPositions[p]; });
 
       playersOnPitch     = currentLineup.length;
       basePlayersOnPitch = currentLineup.length;
@@ -723,6 +973,9 @@
       bench.splice(benchIdx, 1);
       bench.push(pitchPlayer);
 
+      positions[benchPlayer] = positions[pitchPlayer];
+      delete positions[pitchPlayer];
+
       playerStats[pitchPlayer].substitutions++;
       playerStats[benchPlayer].substitutions++;
       clearModes();
@@ -747,6 +1000,9 @@
       const isOnPitch = currentLineup.includes(player);
 
       if (isOnPitch) {
+        const tmp = positions[goaliePlayer];
+        positions[goaliePlayer] = positions[player];
+        positions[player] = tmp;
         goaliePlayer = player;
       } else {
         const pitchIdx = currentLineup.indexOf(goaliePlayer);
@@ -755,6 +1011,8 @@
         bench.splice(benchIdx, 1);
         bench.push(goaliePlayer);
         currentLineup[pitchIdx] = player;
+        positions[player] = 'GK';
+        delete positions[goaliePlayer];
         playerStats[goaliePlayer].substitutions++;
         playerStats[player].substitutions++;
         goaliePlayer = player;
@@ -784,6 +1042,7 @@
       if (idx === -1 || player === goaliePlayer) { clearModes(); renderGame(); return; }
       currentLineup.splice(idx, 1);
       bench.push(player);
+      delete positions[player];
       playersOnPitch--;
       clearModes();
       saveState();
@@ -792,11 +1051,31 @@
 
     // Reset every selection mode / staged action back to neutral.
     function clearModes() {
-      selectedPitchPlayer = null;
-      swapGoalieMode       = false;
-      addExtraMode         = false;
-      removeExtraMode      = false;
-      pendingAction         = null;
+      selectedPitchPlayer    = null;
+      swapGoalieMode         = false;
+      addExtraMode           = false;
+      removeExtraMode        = false;
+      pendingAction          = null;
+      swapPositionMode       = false;
+      selectedPositionPlayer = null;
+    }
+
+    // ── Swap Positions (on-pitch, no bench involved) ────────────────────────
+    function handlePositionTap(player) {
+      if (player === goaliePlayer) return;
+      if (selectedPositionPlayer === player) {
+        selectedPositionPlayer = null;
+      } else if (!selectedPositionPlayer) {
+        selectedPositionPlayer = player;
+      } else {
+        const tmp = positions[selectedPositionPlayer];
+        positions[selectedPositionPlayer] = positions[player];
+        positions[player] = tmp;
+        selectedPositionPlayer = null;
+        swapPositionMode = false;
+      }
+      saveState();
+      renderGame();
     }
 
     // ── Reset ────────────────────────────────────────────────────────────────
@@ -810,15 +1089,18 @@
       currentTime = 0; isRunning = false; setupComplete = false;
       countdown = 0; isBlinking = false;
       currentLineup = []; bench = []; playerStats = {};
+      positions = {}; activeFormationSlots = [];
+      setupAssignments = {}; selectedFormatSize = 7; selectedFormationKey = null;
       subModalOpen = false;
       clearModes();
 
-      playersOnPitchInput.value       = 7;
       substitutionIntervalInput.value = 5;
       playersToRotateInput.value      = 2;
 
       setupScreen.style.display = 'block';
       gameScreen.style.display  = 'none';
+      renderFormatButtons();
+      renderFormationButtons();
       renderPlayerList();
     }
 
@@ -837,12 +1119,14 @@
       benchCountEl.textContent  = bench.length;
 
       // Hints
-      const anyMode = swapGoalieMode || addExtraMode || removeExtraMode;
+      const anyMode = swapGoalieMode || addExtraMode || removeExtraMode || swapPositionMode;
       swapHintEl.style.display        = (!anyMode && !pendingAction && selectedPitchPlayer) ? 'block' : 'none';
       swapGoalieHintEl.style.display  = (swapGoalieMode && !pendingAction) ? 'block' : 'none';
+      swapPositionHintEl.style.display = (swapPositionMode && !pendingAction) ? 'block' : 'none';
       addExtraHintEl.style.display    = (addExtraMode && !pendingAction) ? 'block' : 'none';
       removeExtraHintEl.style.display = (removeExtraMode && !pendingAction) ? 'block' : 'none';
       swapGKBtn.style.outline         = swapGoalieMode ? '3px solid #92400e' : 'none';
+      swapPosBtn.style.outline        = swapPositionMode ? '3px solid #0f766e' : 'none';
       addExtraBtn.style.outline       = addExtraMode ? '3px solid #92400e' : 'none';
       removeExtraBtn.style.outline    = removeExtraMode ? '3px solid #92400e' : 'none';
 
@@ -871,8 +1155,12 @@
         const el = document.createElement('div');
         el.className = 'player-item';
 
+        const isPosSelected = player === selectedPositionPlayer;
+
         if (swapGoalieMode && !pendingAction) {
           el.classList.add(isGK ? 'selected' : 'goalie-selectable');
+        } else if (swapPositionMode && !pendingAction) {
+          if (!isGK) el.classList.add(isPosSelected ? 'selected' : 'goalie-selectable');
         } else if (removeExtraMode && !pendingAction) {
           if (!isGK) el.classList.add('goalie-selectable');
         } else if (isSelected) {
@@ -883,14 +1171,16 @@
         }
         if (isGK) el.classList.add('goalie-border');
 
+        const posTag  = positions[player] ? ` (pos: ${positions[player]})` : '';
         const arrow   = isLeaving ? ' ↑' : '';
         const gkBadge = isGK ? '<span class="gk-badge">GK</span>' : '';
-        const chevron = isSelected ? '✕' : (isGK && swapGoalieMode ? '✕' : '›');
-        el.innerHTML  = `<span>${player}${arrow}${gkBadge}</span><span class="tap-hint">${chevron}</span>`;
+        const chevron = (isSelected || isPosSelected) ? '✕' : (isGK && swapGoalieMode ? '✕' : '›');
+        el.innerHTML  = `<span>${player}${posTag}${arrow}${gkBadge}</span><span class="tap-hint">${chevron}</span>`;
 
         const onTap = () => {
           if (pendingAction) return;
           if (swapGoalieMode) { handleSwapGoalieTap(player); return; }
+          if (swapPositionMode) { handlePositionTap(player); return; }
           if (removeExtraMode) {
             if (isGK) return;
             pendingAction    = { type: 'removeExtra', player };
@@ -938,6 +1228,7 @@
             return;
           }
           if (removeExtraMode) return;
+          if (swapPositionMode) return;
           if (selectedPitchPlayer) {
             pendingAction = { type: 'quickSwap', pitch: selectedPitchPlayer, bench: player };
             selectedPitchPlayer = null;
@@ -1025,6 +1316,13 @@
       renderGame();
     });
 
+    swapPosBtn.addEventListener('click', () => {
+      const next = !swapPositionMode;
+      clearModes();
+      swapPositionMode = next;
+      renderGame();
+    });
+
     subNowBtn.addEventListener('click', () => {
       if (bench.length === 0) return;
       clearModes();
@@ -1071,18 +1369,9 @@
       renderGame();
     });
 
-    playersOnPitchInput.addEventListener('change', () => {
-      playersOnPitch = parseInt(playersOnPitchInput.value) || 7;
-      if (playersToRotate >= playersOnPitch) {
-        playersToRotate = playersOnPitch - 1;
-        playersToRotateInput.value = playersToRotate;
-      }
-      renderPlayerList();
-    });
-
     playersToRotateInput.addEventListener('change', () => {
       const v = parseInt(playersToRotateInput.value) || 1;
-      playersToRotate = Math.min(v, playersOnPitch - 1);
+      playersToRotate = Math.min(v, selectedFormatSize - 1);
       playersToRotateInput.value = playersToRotate;
     });
 
@@ -1096,7 +1385,6 @@
       const hasSaved = loadState();
       if (hasSaved && setupComplete) {
         if (confirm('Continue previous game?')) {
-          playersOnPitchInput.value       = playersOnPitch;
           substitutionIntervalInput.value = substitutionInterval;
           playersToRotateInput.value      = playersToRotate;
           rotationCountEl.textContent     = playersToRotate;
@@ -1106,15 +1394,20 @@
           renderGame();
         } else {
           clearSavedState();
-          players = []; goaliePlayer = null;
+          players = []; goaliePlayer = null; positions = {}; activeFormationSlots = [];
+          renderFormatButtons();
+          renderFormationButtons();
           renderPlayerList();
         }
       } else if (hasSaved && !setupComplete) {
-        playersOnPitchInput.value       = playersOnPitch;
         substitutionIntervalInput.value = substitutionInterval;
         playersToRotateInput.value      = playersToRotate;
+        renderFormatButtons();
+        renderFormationButtons();
         renderPlayerList();
       } else {
+        renderFormatButtons();
+        renderFormationButtons();
         renderPlayerList();
       }
     });
