@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Soccer Substitution Manager</title>
+  <link rel="icon" type="image/png" href="logo.png">
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -231,7 +232,10 @@
   <div id="app">
     <!-- Setup screen -->
     <div id="setup-screen">
-      <h1>Soccer Substitution Manager</h1>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <img src="logo.png" alt="" style="width:42px;height:42px;flex-shrink:0;">
+        <h1 style="margin:0;">Soccer Substitution Manager</h1>
+      </div>
 
       <div class="card">
         <h2>Team members</h2>
@@ -266,7 +270,10 @@
     <!-- Game screen -->
     <div id="game-screen" style="display:none;">
       <div class="game-header">
-        <h1 style="font-size:1.4rem;margin-bottom:0;">Soccer Sub Manager</h1>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <img src="logo.png" alt="" style="width:32px;height:32px;flex-shrink:0;">
+          <h1 style="font-size:1.4rem;margin-bottom:0;">Soccer Sub Manager</h1>
+        </div>
         <div id="game-time" class="game-time">0 min</div>
       </div>
 
