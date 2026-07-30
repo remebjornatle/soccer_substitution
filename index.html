@@ -282,6 +282,8 @@
         <div id="swap-goalie-hint" class="hint-bar hint-swap-goalie" style="display:none;">
           Tap any player to become the new goalkeeper. Tap current GK to cancel.
         </div>
+        <p id="add-extra-hint" class="hint-bar hint-swap-pitch" style="display:none;">Tap a bench player to bring them on as an extra player</p>
+        <p id="remove-extra-hint" class="hint-bar hint-swap-pitch" style="display:none;">Tap an on-pitch player to send them back to the bench</p>
         <div id="current-lineup" class="lineup-container"></div>
       </div>
 
@@ -345,7 +347,14 @@
     let swapGoalieMode       = false;
     let subModalOpen         = false;
     let subModalSource       = 'timer'; // 'timer' | 'manual'
-    let pendingSwap          = null;    // { pitch, bench } | null
+    let addExtraMode         = false;
+    let removeExtraMode      = false;
+    // pendingAction: staged change awaiting confirm/cancel via the swap-confirm-bar.
+    //   { type: 'quickSwap',   pitch, bench }
+    //   { type: 'gkSwap',      player }
+    //   { type: 'addExtra',    player }
+    //   { type: 'removeExtra', player }
+    let pendingAction        = null;
     let breakModalOpen       = false;
     let breakOnPitch         = new Set(); // staged reshuffle: player names currently marked on-pitch
     let breakGoalie          = null;      // staged reshuffle: player name marked GK
@@ -380,6 +389,8 @@
     const playerStatsMobileEl       = document.getElementById('player-stats-mobile');
     const swapHintEl                = document.getElementById('swap-hint');
     const swapGoalieHintEl          = document.getElementById('swap-goalie-hint');
+    const addExtraHintEl            = document.getElementById('add-extra-hint');
+    const removeExtraHintEl         = document.getElementById('remove-extra-hint');
     const swapConfirmBar            = document.getElementById('swap-confirm-bar');
     const swapConfirmText           = document.getElementById('swap-confirm-text');
     const swapConfirmYes            = document.getElementById('swap-confirm-yes');
@@ -536,10 +547,9 @@
       currentLineup = [...remainingField, ...entering, goaliePlayer];
       bench         = [...remainingBench, ...leaving];
 
-      countdown           = substitutionInterval * 60;
-      isBlinking          = false;
-      selectedPitchPlayer = null;
-      pendingSwap         = null;
+      countdown  = substitutionInterval * 60;
+      isBlinking = false;
+      clearModes();
       saveState();
       renderGame();
     }
@@ -550,7 +560,7 @@
 
       subModalOpen   = true;
       subModalSource = source;
-      pendingSwap    = null;
+      pendingAction  = null;
 
       subModalLeaving.innerHTML  = sub.leaving.map(p  => `<div class="sub-player-off">↑ ${p}</div>`).join('');
       subModalEntering.innerHTML = sub.entering.map(p => `<div class="sub-player-on">↓ ${p}</div>`).join('');
@@ -631,11 +641,9 @@
       playersOnPitch     = currentLineup.length;
       basePlayersOnPitch = currentLineup.length;
 
-      countdown            = substitutionInterval * 60;
-      isBlinking           = false;
-      selectedPitchPlayer  = null;
-      pendingSwap          = null;
-      swapGoalieMode       = false;
+      countdown  = substitutionInterval * 60;
+      isBlinking = false;
+      clearModes();
 
       breakModalOpen = false;
       breakModal.classList.remove('open');
@@ -658,6 +666,7 @@
       if (timer) clearInterval(timer);
       timer = setInterval(() => {
         if (!isRunning || subModalOpen || breakModalOpen) return;
+        if (pendingAction || swapGoalieMode || addExtraMode || removeExtraMode) return;
 
         countdown--;
         isBlinking = countdown <= 30;
@@ -709,20 +718,25 @@
 
       playerStats[pitchPlayer].substitutions++;
       playerStats[benchPlayer].substitutions++;
-      selectedPitchPlayer = null;
-      pendingSwap         = null;
+      clearModes();
       saveState();
       renderGame();
     }
 
     // ── Swap goalkeeper ──────────────────────────────────────────────────────
+    // Tapping a player in Swap GK mode only stages the change; applyGKSwap
+    // performs it once the coach confirms via the swap-confirm-bar.
     function handleSwapGoalieTap(player) {
       if (player === goaliePlayer) {
         swapGoalieMode = false;
         renderGame();
         return;
       }
+      pendingAction = { type: 'gkSwap', player };
+      renderGame();
+    }
 
+    function applyGKSwap(player) {
       const isOnPitch = currentLineup.includes(player);
 
       if (isOnPitch) {
@@ -730,6 +744,7 @@
       } else {
         const pitchIdx = currentLineup.indexOf(goaliePlayer);
         const benchIdx = bench.indexOf(player);
+        if (benchIdx === -1) { clearModes(); renderGame(); return; }
         bench.splice(benchIdx, 1);
         bench.push(goaliePlayer);
         currentLineup[pitchIdx] = player;
@@ -738,32 +753,43 @@
         goaliePlayer = player;
       }
 
-      swapGoalieMode = false;
+      clearModes();
       saveState();
       renderGame();
     }
 
     // ── Extra player (temporary mid-game roster size change) ──────────────────
-    function addExtraPlayer() {
-      if (bench.length === 0) return;
-      const incoming = bench.shift();
-      currentLineup.push(incoming);
+    // Add/Remove Extra Player only enter a tap-to-select mode; the actual
+    // change is applied by applyAddExtra/applyRemoveExtra once confirmed.
+    function applyAddExtra(player) {
+      const idx = bench.indexOf(player);
+      if (idx === -1) { clearModes(); renderGame(); return; }
+      bench.splice(idx, 1);
+      currentLineup.push(player);
       playersOnPitch++;
+      clearModes();
       saveState();
       renderGame();
     }
 
-    function removeExtraPlayer() {
-      if (currentLineup.length <= basePlayersOnPitch) return;
-      const fieldOnPitch = currentLineup.filter(p => p !== goaliePlayer);
-      if (fieldOnPitch.length === 0) return;
-      const leaving = fieldOnPitch[fieldOnPitch.length - 1];
-      const idx = currentLineup.indexOf(leaving);
+    function applyRemoveExtra(player) {
+      const idx = currentLineup.indexOf(player);
+      if (idx === -1 || player === goaliePlayer) { clearModes(); renderGame(); return; }
       currentLineup.splice(idx, 1);
-      bench.push(leaving);
+      bench.push(player);
       playersOnPitch--;
+      clearModes();
       saveState();
       renderGame();
+    }
+
+    // Reset every selection mode / staged action back to neutral.
+    function clearModes() {
+      selectedPitchPlayer = null;
+      swapGoalieMode       = false;
+      addExtraMode         = false;
+      removeExtraMode      = false;
+      pendingAction         = null;
     }
 
     // ── Reset ────────────────────────────────────────────────────────────────
@@ -777,8 +803,8 @@
       currentTime = 0; isRunning = false; setupComplete = false;
       countdown = 0; isBlinking = false;
       currentLineup = []; bench = []; playerStats = {};
-      selectedPitchPlayer = null; swapGoalieMode = false;
-      subModalOpen = false; pendingSwap = null;
+      subModalOpen = false;
+      clearModes();
 
       playersOnPitchInput.value       = 7;
       substitutionIntervalInput.value = 5;
@@ -804,14 +830,23 @@
       benchCountEl.textContent  = bench.length;
 
       // Hints
-      swapHintEl.style.display       = (!swapGoalieMode && !pendingSwap && selectedPitchPlayer) ? 'block' : 'none';
-      swapGoalieHintEl.style.display = swapGoalieMode ? 'block' : 'none';
-      swapGKBtn.style.outline        = swapGoalieMode ? '3px solid #92400e' : 'none';
+      const anyMode = swapGoalieMode || addExtraMode || removeExtraMode;
+      swapHintEl.style.display        = (!anyMode && !pendingAction && selectedPitchPlayer) ? 'block' : 'none';
+      swapGoalieHintEl.style.display  = (swapGoalieMode && !pendingAction) ? 'block' : 'none';
+      addExtraHintEl.style.display    = (addExtraMode && !pendingAction) ? 'block' : 'none';
+      removeExtraHintEl.style.display = (removeExtraMode && !pendingAction) ? 'block' : 'none';
+      swapGKBtn.style.outline         = swapGoalieMode ? '3px solid #92400e' : 'none';
+      addExtraBtn.style.outline       = addExtraMode ? '3px solid #92400e' : 'none';
+      removeExtraBtn.style.outline    = removeExtraMode ? '3px solid #92400e' : 'none';
 
-      // Swap confirm bar
-      if (pendingSwap) {
+      // Swap confirm bar — one shared bar for every staged (pendingAction) change
+      if (pendingAction) {
         swapConfirmBar.style.display = 'block';
-        swapConfirmText.textContent  = `Swap ${pendingSwap.pitch} ↔ ${pendingSwap.bench}?`;
+        const a = pendingAction;
+        if (a.type === 'quickSwap')        swapConfirmText.textContent = `Swap ${a.pitch} ↔ ${a.bench}?`;
+        else if (a.type === 'gkSwap')      swapConfirmText.textContent = `Make ${a.player} the new goalkeeper?`;
+        else if (a.type === 'addExtra')    swapConfirmText.textContent = `Add ${a.player} as an extra player on the pitch?`;
+        else if (a.type === 'removeExtra') swapConfirmText.textContent = `Send ${a.player} back to the bench?`;
       } else {
         swapConfirmBar.style.display = 'none';
       }
@@ -829,8 +864,10 @@
         const el = document.createElement('div');
         el.className = 'player-item';
 
-        if (swapGoalieMode) {
+        if (swapGoalieMode && !pendingAction) {
           el.classList.add(isGK ? 'selected' : 'goalie-selectable');
+        } else if (removeExtraMode && !pendingAction) {
+          if (!isGK) el.classList.add('goalie-selectable');
         } else if (isSelected) {
           el.classList.add('selected');
         } else if (isLeaving) {
@@ -845,8 +882,16 @@
         el.innerHTML  = `<span>${player}${arrow}${gkBadge}</span><span class="tap-hint">${chevron}</span>`;
 
         const onTap = () => {
-          if (pendingSwap) return;
+          if (pendingAction) return;
           if (swapGoalieMode) { handleSwapGoalieTap(player); return; }
+          if (removeExtraMode) {
+            if (isGK) return;
+            pendingAction    = { type: 'removeExtra', player };
+            removeExtraMode  = false;
+            renderGame();
+            return;
+          }
+          if (addExtraMode) return;
           if (!isGK) {
             selectedPitchPlayer = (selectedPitchPlayer === player) ? null : player;
             renderGame();
@@ -864,21 +909,30 @@
         const el = document.createElement('div');
         el.className = 'player-item';
 
-        if (swapGoalieMode) {
+        if (swapGoalieMode && !pendingAction) {
           el.classList.add('goalie-selectable');
-        } else if (!pendingSwap && selectedPitchPlayer) {
+        } else if (addExtraMode && !pendingAction) {
+          el.classList.add('goalie-selectable');
+        } else if (!pendingAction && selectedPitchPlayer) {
           el.classList.add('bench-selectable');
-        } else if (isEntering && !pendingSwap) {
+        } else if (isEntering && !pendingAction) {
           el.classList.add('entering');
         }
 
-        el.textContent = player + (isEntering && !swapGoalieMode && !pendingSwap ? ' ↓' : '');
+        el.textContent = player + (isEntering && !anyMode && !pendingAction ? ' ↓' : '');
 
         const onTap = () => {
-          if (pendingSwap) return;
+          if (pendingAction) return;
           if (swapGoalieMode) { handleSwapGoalieTap(player); return; }
+          if (addExtraMode) {
+            pendingAction = { type: 'addExtra', player };
+            addExtraMode  = false;
+            renderGame();
+            return;
+          }
+          if (removeExtraMode) return;
           if (selectedPitchPlayer) {
-            pendingSwap = { pitch: selectedPitchPlayer, bench: player };
+            pendingAction = { type: 'quickSwap', pitch: selectedPitchPlayer, bench: player };
             selectedPitchPlayer = null;
             renderGame();
           }
@@ -958,23 +1012,36 @@
     });
 
     swapGKBtn.addEventListener('click', () => {
-      swapGoalieMode      = !swapGoalieMode;
-      selectedPitchPlayer = null;
-      pendingSwap         = null;
+      const next = !swapGoalieMode;
+      clearModes();
+      swapGoalieMode = next;
       renderGame();
     });
 
     subNowBtn.addEventListener('click', () => {
       if (bench.length === 0) return;
-      selectedPitchPlayer = null;
-      pendingSwap         = null;
-      swapGoalieMode      = false;
+      clearModes();
       openSubModal('manual');
     });
 
     demoBtn.addEventListener('click', handleDemoMinute);
-    addExtraBtn.addEventListener('click', addExtraPlayer);
-    removeExtraBtn.addEventListener('click', removeExtraPlayer);
+
+    addExtraBtn.addEventListener('click', () => {
+      if (bench.length === 0) return;
+      const next = !addExtraMode;
+      clearModes();
+      addExtraMode = next;
+      renderGame();
+    });
+
+    removeExtraBtn.addEventListener('click', () => {
+      if (currentLineup.length <= basePlayersOnPitch) return;
+      const next = !removeExtraMode;
+      clearModes();
+      removeExtraMode = next;
+      renderGame();
+    });
+
     resetBtn.addEventListener('click', resetGame);
 
     subConfirmBtn.addEventListener('click', () => closeSubModal(true));
@@ -985,11 +1052,15 @@
     breakCancelBtn.addEventListener('click', cancelBreak);
 
     swapConfirmYes.addEventListener('click', () => {
-      if (pendingSwap) swapPlayers(pendingSwap.pitch, pendingSwap.bench);
+      if (!pendingAction) return;
+      const { type } = pendingAction;
+      if (type === 'quickSwap')        swapPlayers(pendingAction.pitch, pendingAction.bench);
+      else if (type === 'gkSwap')      applyGKSwap(pendingAction.player);
+      else if (type === 'addExtra')    applyAddExtra(pendingAction.player);
+      else if (type === 'removeExtra') applyRemoveExtra(pendingAction.player);
     });
     swapConfirmNo.addEventListener('click', () => {
-      pendingSwap         = null;
-      selectedPitchPlayer = null;
+      clearModes();
       renderGame();
     });
 
