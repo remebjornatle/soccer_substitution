@@ -34,6 +34,7 @@
     .danger-btn  { background-color: #ef4444; color: white; }
     .dark-btn    { background-color: #4b5563; color: white; }
     .amber-btn   { background-color: #b45309; color: white; }
+    .indigo-btn  { background-color: #6366f1; color: white; }
     .disabled    { background-color: #9ca3af; cursor: not-allowed; opacity: 0.7; }
 
     .player-list { margin: 16px 0; }
@@ -178,6 +179,10 @@
     .sub-modal-actions { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
     .sub-modal-actions button { margin: 0; }
 
+    #break-modal .sub-modal-box { max-height: 85vh; overflow-y: auto; }
+    .break-player-item .set-gk-btn { flex-shrink: 0; }
+    .break-status { font-weight: normal; font-size: 0.75rem; }
+
     @media (max-width: 360px) {
       body { padding: 12px; }
       h1   { font-size: 1.5rem; }
@@ -203,6 +208,22 @@
       <div class="sub-modal-actions">
         <button id="sub-confirm-btn" class="success-btn">Confirm Substitution</button>
         <button id="sub-cancel-btn"  class="dark-btn">Skip this sub</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Match reset (break / reshuffle) modal -->
+  <div id="break-modal" class="sub-modal-overlay">
+    <div class="sub-modal-box">
+      <h2>Match Reset</h2>
+      <p style="margin:-8px 0 12px;color:#6b7280;font-size:0.85rem;text-align:center;">
+        Tap a player to move them on/off the pitch. Tap "Set GK" to choose the goalkeeper.
+      </p>
+      <p id="break-count-line" style="text-align:center;color:#6b7280;font-size:0.85rem;margin:0 0 10px;"></p>
+      <div id="break-player-list" class="player-list"></div>
+      <div class="sub-modal-actions">
+        <button id="break-confirm-btn" class="success-btn">Confirm &amp; Resume</button>
+        <button id="break-cancel-btn"  class="dark-btn">Cancel</button>
       </div>
     </div>
   </div>
@@ -289,9 +310,12 @@
         <button id="swap-gk-btn"  class="amber-btn">Swap GK</button>
         <button id="sub-now-btn"  class="primary-btn">Sub Now</button>
         <button id="demo-btn"     class="dark-btn">+1 Minute</button>
+        <button id="add-extra-btn"    class="success-btn">Add Extra Player</button>
+        <button id="remove-extra-btn" class="dark-btn">Remove Extra Player</button>
       </div>
 
-      <button id="reset-btn" class="danger-btn" style="margin-top:12px;">Reset Game</button>
+      <button id="break-btn" class="indigo-btn" style="margin-top:12px;">Match Reset (Break)</button>
+      <button id="reset-btn" class="danger-btn">Full Reset</button>
 
       <div class="stats-container">
         <h2>Player Stats</h2>
@@ -305,6 +329,7 @@
     let players              = [];
     let goaliePlayer         = null;
     let playersOnPitch       = 7;
+    let basePlayersOnPitch   = 7; // pitch size at kickoff; "Remove Extra Player" won't shrink below this
     let substitutionInterval = 5;
     let playersToRotate      = 2;
     let currentTime          = 0;
@@ -321,6 +346,10 @@
     let subModalOpen         = false;
     let subModalSource       = 'timer'; // 'timer' | 'manual'
     let pendingSwap          = null;    // { pitch, bench } | null
+    let breakModalOpen       = false;
+    let breakOnPitch         = new Set(); // staged reshuffle: player names currently marked on-pitch
+    let breakGoalie          = null;      // staged reshuffle: player name marked GK
+    let wasRunningBeforeBreak = false;
 
     // ── DOM refs ─────────────────────────────────────────────────────────────
     const setupScreen               = document.getElementById('setup-screen');
@@ -337,6 +366,8 @@
     const swapGKBtn                 = document.getElementById('swap-gk-btn');
     const subNowBtn                 = document.getElementById('sub-now-btn');
     const demoBtn                   = document.getElementById('demo-btn');
+    const addExtraBtn               = document.getElementById('add-extra-btn');
+    const removeExtraBtn            = document.getElementById('remove-extra-btn');
     const resetBtn                  = document.getElementById('reset-btn');
     const currentLineupEl           = document.getElementById('current-lineup');
     const benchEl                   = document.getElementById('bench');
@@ -358,11 +389,17 @@
     const subModalEntering          = document.getElementById('sub-modal-entering');
     const subConfirmBtn             = document.getElementById('sub-confirm-btn');
     const subCancelBtn              = document.getElementById('sub-cancel-btn');
+    const breakBtn                  = document.getElementById('break-btn');
+    const breakModal                = document.getElementById('break-modal');
+    const breakPlayerListEl         = document.getElementById('break-player-list');
+    const breakCountLine            = document.getElementById('break-count-line');
+    const breakConfirmBtn           = document.getElementById('break-confirm-btn');
+    const breakCancelBtn            = document.getElementById('break-cancel-btn');
 
     // ── Persistence ──────────────────────────────────────────────────────────
     function saveState() {
       localStorage.setItem('soccerSub', JSON.stringify({
-        players, goaliePlayer, playersOnPitch, substitutionInterval, playersToRotate,
+        players, goaliePlayer, playersOnPitch, basePlayersOnPitch, substitutionInterval, playersToRotate,
         currentTime, setupComplete, countdown, isBlinking, currentLineup, bench, playerStats
       }));
     }
@@ -375,6 +412,7 @@
         players              = s.players;
         goaliePlayer         = s.goaliePlayer;
         playersOnPitch       = s.playersOnPitch;
+        basePlayersOnPitch   = s.basePlayersOnPitch ?? s.playersOnPitch;
         substitutionInterval = s.substitutionInterval;
         playersToRotate      = s.playersToRotate;
         currentTime          = s.currentTime;
@@ -443,6 +481,7 @@
     // ── Game start ───────────────────────────────────────────────────────────
     function startGame() {
       playersOnPitch       = parseInt(playersOnPitchInput.value) || 7;
+      basePlayersOnPitch   = playersOnPitch;
       substitutionInterval = parseInt(substitutionIntervalInput.value) || 5;
       playersToRotate      = parseInt(playersToRotateInput.value) || 2;
 
@@ -533,11 +572,92 @@
       }
     }
 
+    // ── Match reset (break / reshuffle) ─────────────────────────────────────
+    function openBreakModal() {
+      wasRunningBeforeBreak = isRunning;
+      isRunning       = false;
+      breakOnPitch    = new Set(currentLineup);
+      breakGoalie     = goaliePlayer;
+      breakModalOpen  = true;
+      renderBreakModal();
+      breakModal.classList.add('open');
+    }
+
+    function renderBreakModal() {
+      breakPlayerListEl.innerHTML = '';
+
+      players.forEach(player => {
+        const onPitch = breakOnPitch.has(player);
+        const isGK    = player === breakGoalie;
+
+        const item = document.createElement('div');
+        item.className = 'player-item break-player-item' + (isGK ? ' goalie-border' : '');
+        item.style.cursor = isGK ? 'default' : 'pointer';
+        item.style.backgroundColor = onPitch ? '#d1fae5' : 'white';
+        item.innerHTML = `
+          <span>${player}${isGK ? '<span class="gk-badge">GK</span>' : ''}<br>
+            <span class="break-status" style="color:${onPitch ? '#065f46' : '#6b7280'};">${onPitch ? 'On Pitch' : 'On Bench'}</span>
+          </span>
+          <button class="set-gk-btn" ${isGK ? 'disabled' : ''}>${isGK ? 'GK' : 'Set GK'}</button>`;
+
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.set-gk-btn') || isGK) return;
+          if (onPitch) breakOnPitch.delete(player); else breakOnPitch.add(player);
+          renderBreakModal();
+        });
+        item.querySelector('.set-gk-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          breakGoalie = player;
+          breakOnPitch.add(player);
+          renderBreakModal();
+        });
+        breakPlayerListEl.appendChild(item);
+      });
+
+      const onPitchCount = breakOnPitch.size;
+      breakCountLine.textContent = `${onPitchCount} on pitch · ${players.length - onPitchCount} on bench`;
+
+      const valid = onPitchCount >= 2 && breakGoalie && breakOnPitch.has(breakGoalie);
+      breakConfirmBtn.disabled  = !valid;
+      breakConfirmBtn.className = valid ? 'success-btn' : 'success-btn disabled';
+    }
+
+    function confirmBreak() {
+      const fieldPlayers = players.filter(p => breakOnPitch.has(p) && p !== breakGoalie);
+      currentLineup = [...fieldPlayers, breakGoalie];
+      bench         = players.filter(p => !breakOnPitch.has(p));
+      goaliePlayer  = breakGoalie;
+
+      playersOnPitch     = currentLineup.length;
+      basePlayersOnPitch = currentLineup.length;
+
+      countdown            = substitutionInterval * 60;
+      isBlinking           = false;
+      selectedPitchPlayer  = null;
+      pendingSwap          = null;
+      swapGoalieMode       = false;
+
+      breakModalOpen = false;
+      breakModal.classList.remove('open');
+      isRunning = wasRunningBeforeBreak;
+      if (isRunning) startTimer();
+      saveState();
+      renderGame();
+    }
+
+    function cancelBreak() {
+      breakModalOpen = false;
+      breakModal.classList.remove('open');
+      isRunning = wasRunningBeforeBreak;
+      if (isRunning) startTimer();
+      renderGame();
+    }
+
     // ── Timer ────────────────────────────────────────────────────────────────
     function startTimer() {
       if (timer) clearInterval(timer);
       timer = setInterval(() => {
-        if (!isRunning || subModalOpen) return;
+        if (!isRunning || subModalOpen || breakModalOpen) return;
 
         countdown--;
         isBlinking = countdown <= 30;
@@ -619,6 +739,29 @@
       }
 
       swapGoalieMode = false;
+      saveState();
+      renderGame();
+    }
+
+    // ── Extra player (temporary mid-game roster size change) ──────────────────
+    function addExtraPlayer() {
+      if (bench.length === 0) return;
+      const incoming = bench.shift();
+      currentLineup.push(incoming);
+      playersOnPitch++;
+      saveState();
+      renderGame();
+    }
+
+    function removeExtraPlayer() {
+      if (currentLineup.length <= basePlayersOnPitch) return;
+      const fieldOnPitch = currentLineup.filter(p => p !== goaliePlayer);
+      if (fieldOnPitch.length === 0) return;
+      const leaving = fieldOnPitch[fieldOnPitch.length - 1];
+      const idx = currentLineup.indexOf(leaving);
+      currentLineup.splice(idx, 1);
+      bench.push(leaving);
+      playersOnPitch--;
       saveState();
       renderGame();
     }
@@ -762,6 +905,13 @@
       subNowBtn.disabled  = noSub;
       subNowBtn.className = noSub ? 'primary-btn disabled' : 'primary-btn';
 
+      addExtraBtn.disabled  = bench.length === 0;
+      addExtraBtn.className = bench.length === 0 ? 'success-btn disabled' : 'success-btn';
+
+      const noExtra = currentLineup.length <= basePlayersOnPitch;
+      removeExtraBtn.disabled  = noExtra;
+      removeExtraBtn.className = noExtra ? 'dark-btn disabled' : 'dark-btn';
+
       // ── Player stats ──
       playerStatsMobileEl.innerHTML = '';
       players.forEach(player => {
@@ -823,10 +973,16 @@
     });
 
     demoBtn.addEventListener('click', handleDemoMinute);
+    addExtraBtn.addEventListener('click', addExtraPlayer);
+    removeExtraBtn.addEventListener('click', removeExtraPlayer);
     resetBtn.addEventListener('click', resetGame);
 
     subConfirmBtn.addEventListener('click', () => closeSubModal(true));
     subCancelBtn.addEventListener('click',  () => closeSubModal(false));
+
+    breakBtn.addEventListener('click', openBreakModal);
+    breakConfirmBtn.addEventListener('click', () => { if (!breakConfirmBtn.disabled) confirmBreak(); });
+    breakCancelBtn.addEventListener('click', cancelBreak);
 
     swapConfirmYes.addEventListener('click', () => {
       if (pendingSwap) swapPlayers(pendingSwap.pitch, pendingSwap.bench);
