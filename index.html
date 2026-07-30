@@ -252,11 +252,11 @@
         <h2>Game Settings</h2>
         <div>
           <label for="players-on-pitch">Players on pitch (including GK)?</label>
-          <input type="number" id="players-on-pitch" min="2" value="7">
+          <input type="number" id="players-on-pitch" min="2" value="5">
         </div>
         <div>
           <label for="substitution-interval">Substitution interval (minutes)?</label>
-          <input type="number" id="substitution-interval" min="1" value="5">
+          <input type="number" id="substitution-interval" min="1" value="3">
         </div>
         <div>
           <label for="players-to-rotate">Players to rotate each time?</label>
@@ -337,9 +337,9 @@
     // ── State ────────────────────────────────────────────────────────────────
     let players              = [];
     let goaliePlayer         = null;
-    let playersOnPitch       = 7;
-    let basePlayersOnPitch   = 7; // pitch size at kickoff; "Remove Extra Player" won't shrink below this
-    let substitutionInterval = 5;
+    let playersOnPitch       = 5;
+    let basePlayersOnPitch   = 5; // pitch size at kickoff; "Remove Extra Player" won't shrink below this
+    let substitutionInterval = 3;
     let playersToRotate      = 2;
     let currentTime          = 0;
     let isRunning            = false;
@@ -498,9 +498,9 @@
 
     // ── Game start ───────────────────────────────────────────────────────────
     function startGame() {
-      playersOnPitch       = parseInt(playersOnPitchInput.value) || 7;
+      playersOnPitch       = parseInt(playersOnPitchInput.value) || 5;
       basePlayersOnPitch   = playersOnPitch;
-      substitutionInterval = parseInt(substitutionIntervalInput.value) || 5;
+      substitutionInterval = parseInt(substitutionIntervalInput.value) || 3;
       playersToRotate      = parseInt(playersToRotateInput.value) || 2;
 
       if (players.length < playersOnPitch) {
@@ -813,8 +813,8 @@
       subModalOpen = false;
       clearModes();
 
-      playersOnPitchInput.value       = 7;
-      substitutionIntervalInput.value = 5;
+      playersOnPitchInput.value       = 5;
+      substitutionIntervalInput.value = 3;
       playersToRotateInput.value      = 2;
 
       setupScreen.style.display = 'block';
@@ -1072,7 +1072,7 @@
     });
 
     playersOnPitchInput.addEventListener('change', () => {
-      playersOnPitch = parseInt(playersOnPitchInput.value) || 7;
+      playersOnPitch = parseInt(playersOnPitchInput.value) || 5;
       if (playersToRotate >= playersOnPitch) {
         playersToRotate = playersOnPitch - 1;
         playersToRotateInput.value = playersToRotate;
